@@ -28,29 +28,83 @@ This is a research tool and proof-of-concept for theological and philosophical r
 
 **Goal:** Acquire and structure all source material for analysis.
 
-**Tasks:**
-1. Scrape homily metadata from romerotrust.org.uk
-   - Titles, dates, occasions, biblical references
-   - URLs for both Spanish and English versions
-2. Download all PDF files
-   - Spanish originals (~200+ homilies)
-   - English translations
-   - Respectful rate-limiting (don't hammer their servers)
-3. Extract text from PDFs
-   - Handle OCR quality issues
-   - Deal with encoding (UTF-8 for Spanish characters)
-   - Preserve document structure/metadata
-4. Store in structured format
-   - Database schema that preserves exact dates and context
-   - Each homily: date, language, title, full text, source URL, biblical references
+**Workflow:**
+1. Scrape index page → collect basic metadata (occasion, English title, date, biblical references, detail URL)
+2. Visit each detail page → collect Spanish title, PDF URLs (English + Spanish), audio URL if present
+3. Store all metadata in SQLite database
+4. Download all PDFs using database to track progress (AFTER THIS: no more requests to Romero Trust needed)
+5. Extract text from PDFs and store in database
+
+**Database Schema (SQLite):**
+```sql
+CREATE TABLE homilies (
+    id INTEGER PRIMARY KEY,
+    date DATE NOT NULL,
+    occasion TEXT,
+    english_title TEXT,
+    spanish_title TEXT,        -- Only available from detail page
+    detail_url TEXT UNIQUE,
+    biblical_references TEXT,   -- Stored as raw string (unparsed)
+
+    -- PDFs (always exactly 1 English + 1 Spanish per homily)
+    spanish_pdf_url TEXT,
+    spanish_pdf_path TEXT,      -- Local file path after download
+    spanish_text TEXT,           -- Extracted text
+
+    english_pdf_url TEXT,
+    english_pdf_path TEXT,
+    english_text TEXT,
+
+    -- Audio (optional, only some homilies have audio)
+    audio_url TEXT,
+
+    -- Tracking timestamps
+    scraped_at TIMESTAMP,
+    pdfs_downloaded_at TIMESTAMP,
+    text_extracted_at TIMESTAMP
+);
+```
+
+**Key Design Decisions:**
+
+*Schema: Flat vs. Normalized*
+- Chose flat structure (one row per homily) because there's always exactly one English and one Spanish PDF per homily
+- Simpler queries, no joins needed
+- Corpus size (~400 documents) is small enough that denormalization doesn't matter
+
+*Text Storage: Database vs. Files*
+- Store text in database (not separate .txt files)
+- Rationale: Need text for context display when users drill down, easier to query, simpler deployment
+- The inverted index for searching will be built separately from this raw text storage
+
+*Biblical References: Parsed vs. Raw*
+- Store as unparsed strings for now
+- Rationale: Uncertain if formatting is consistent, no immediate use case
+- Can parse later if needed (data-driven decision making)
+
+**Website Structure (Discovered):**
+
+From index page (`/homilies-and-writing/homilies/`):
+- Occasion (e.g., "Funeral Mass for Fr Rutilio Grande, SJ")
+- English title
+- Date (format: "14 March 1977")
+- Detail URL
+- Biblical references with audio indicator (e.g., "(+ AUDIO) John 20:19-31; Acts 5:12-16...")
+
+From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
+- Spanish title (only appears as PDF link text)
+- English PDF URL
+- Spanish PDF URL
+- Audio URL (MP3, when available)
 
 **Learning Goals:** Understand web scraping, PDF processing, text extraction, and data normalization.
 
-**Open Questions (to be answered during this phase):**
+**Open Questions (to be answered during execution):**
 - What's the quality of PDF text extraction? Will we need OCR for scanned images?
-- How consistent is the date formatting?
+- How consistent is the date formatting across all homilies?
 - Are there any missing homilies or gaps in coverage?
 - What's the actual text structure like (headers, footers, formatting)?
+- How should we handle rate limiting? (1-2 seconds between requests)
 
 ### Phase 1: MVP - Spanish Ngram Viewer
 
