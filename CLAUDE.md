@@ -188,13 +188,66 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 ## Current Status
 
 **Phase:** 0 (Data Collection)
-**Current State:** Initial exploration. Basic scraping code exists in `scripts/collect-homilies.py` but is incomplete.
+**Current State:** Index page scraping complete. Database schema designed. Ready to add detail page scraping.
 
-**Immediate Next Steps:**
-1. Complete the data collection pipeline
-2. Examine the extracted text to understand quality and structure
-3. Design database schema based on actual data characteristics
-4. Document learnings about PDF quality, date consistency, coverage gaps
+**Completed:**
+- ✓ Index page scraping (`get_homilies_from_index()`)
+- ✓ Database schema design
+
+**Next Steps:**
+1. Add detail page scraping to get Spanish titles, PDF URLs, and audio URLs
+2. Create database and write metadata to it
+3. Download PDFs
+4. Extract text from PDFs
+
+---
+
+## Phase 0 Work Log
+
+### Session 1: Index Page Scraping & Schema Design
+
+**What We Built:**
+- Implemented `get_homilies_from_index()` in `scripts/collect-homilies.py`
+- Scrapes main index page for basic metadata
+- Returns list of dictionaries with: occasion, title (English), date, detail URL, has_audio flag, biblical references
+
+**What We Learned:**
+
+*Data Coverage:*
+- **195 homilies total** from March 14, 1977 → March 24, 1980 (his final homily before assassination)
+- **172 have audio recordings** (88% - excellent coverage!)
+- Date formatting is perfectly consistent: "DD Month YYYY" format
+- Complete coverage of Romero's tenure as Archbishop
+
+*Biblical References:*
+- Formatting is inconsistent - cannot reliably split on punctuation
+- Commas appear both as separators AND within verse ranges (e.g., "Isaiah 61:1-3a, 6a, 8b-9")
+- Semicolons appear to be the primary separator between different passages
+- Audio indicators appear as "(+AUDIO)", "(+ AUDIO)", or just "AUDIO"
+
+*Website Structure:*
+- Index page uses sibling-based DOM traversal (occasion → title → date → references paragraph)
+- References are in `<p>` tags between homilies
+- Audio indicators are embedded in the references text, not separate fields
+
+**Decisions Made:**
+
+1. **Biblical References Storage:** Store as unparsed strings
+   - Rationale: Inconsistent formatting makes reliable parsing difficult
+   - Can parse later if needed
+   - References are cleaned of audio markers but otherwise preserved exactly
+
+2. **Audio Detection:** Simple string search for "AUDIO" in references text
+   - Remove markers with multiple patterns: "(+AUDIO)", "(+ AUDIO)", "AUDIO"
+   - Clean approach that handles variations
+
+3. **Data Structure:** Keep using dictionaries for now, will convert to database schema in next step
+
+**Code Status:**
+- `get_homilies_from_index()` working and tested
+- Correctly extracts all 195 homilies
+- Audio detection 100% clean (no markers left in references)
+- Ready for detail page scraping
 
 ## Work Cycle
 

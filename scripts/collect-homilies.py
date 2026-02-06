@@ -30,9 +30,14 @@ def get_homilies_from_index():
 
         # Parse needed fields
         date_obj = datetime.strptime(date_block.get_text(strip=True), "%d %B %Y").date()
-        has_audio = "(+AUDIO)" in references_text or "AUDIO" in references_text
-        passages_source = references_text.split(")", 1)[1].strip() if ")" in references_text else references_text
-        passages = [p.strip() for p in passages_source.split(";") if p.strip()]
+
+        # Check for audio
+        has_audio = "AUDIO" in references_text
+
+        # Try to remove audio indicators from references string
+        for marker in ["(+AUDIO)", "(+ AUDIO)", "AUDIO"]:
+            references_text = references_text.replace(marker, "")
+        references_text = references_text.strip()
 
         homilies.append({
             "occasion": occasion.get_text(strip=True),
@@ -40,7 +45,7 @@ def get_homilies_from_index():
             "url": title_block.a["href"],
             "date": date_obj.isoformat(),
             "has_audio": has_audio,
-            "passages": passages,
+            "biblical_references": references_text,
         })
 
     return homilies
