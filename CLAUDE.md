@@ -188,7 +188,7 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 ## Current Status
 
 **Phase:** 0 (Data Collection)
-**Current State:** Metadata collection complete (191/195 Spanish PDFs collected). Ready to create database and download PDFs.
+**Current State:** PDFs downloading (running in background). Next: text extraction and database creation.
 
 **Completed:**
 - ✓ Index page scraping (`get_homilies_from_index()`)
@@ -196,12 +196,14 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 - ✓ Detail page scraping (`add_detail_page_data()`)
 - ✓ Full metadata collection with manual fixes
 - ✓ Metadata saved to `data/homilies_metadata.json`
+- ✓ PDF download script created with safety features
+- ⏳ PDF downloads in progress (~383 PDFs, ~12 minutes total)
 
 **Next Steps:**
-1. Create SQLite database and load metadata
-2. Download all PDFs (191 Spanish + 192 English = ~383 PDFs)
-3. Extract text from PDFs
-4. Store text in database
+1. Verify PDF downloads completed successfully
+2. Extract text from PDFs
+3. Create SQLite database and load all data
+4. Document Phase 0 completion
 
 ---
 
@@ -332,6 +334,43 @@ These are legitimate edge cases - not regular homilies or have audio-only format
 **Key Learning:** Connection errors are transient - retry logic would be useful for production but manual fixes work fine for one-time data collection.
 
 **Status:** Metadata collection complete. Ready for next step (database creation and PDF downloads).
+
+### Session 3: PDF Download Script
+
+**What We Built:**
+- Created `scripts/download_pdfs.py` with safety features:
+  - 2-second rate limiting between downloads
+  - Resume capability (skips existing files)
+  - Consecutive failure detection (stops after 3 failures in a row)
+  - Clean naming schema: `YYYY-MM-DD_{language}_{index}.pdf`
+  - Progress tracking and summary statistics
+
+**Design Decisions:**
+
+1. **Rate Limiting:** 2 seconds between downloads
+   - Respectful of nonprofit server
+   - Total time: ~12-13 minutes for all PDFs
+   - Conservative but safe approach
+
+2. **Safety Mechanism:** Stop after 3 consecutive failures
+   - Prevents hammering server if there's a problem
+   - Resets counter on each successful download
+   - Script is resumable (just re-run to continue)
+
+3. **Naming Schema:** `YYYY-MM-DD_{language}_{index}.pdf`
+   - Sortable by date
+   - Clear language indicator
+   - Index prevents collisions for same-day homilies
+   - Examples:
+     - `1977-03-14_spanish_000.pdf`
+     - `1977-03-14_english_000.pdf`
+
+**Execution:**
+- Script started successfully running in background
+- Will download ~383 PDFs (191 Spanish + 192 English)
+- Output logged to `data/download_log.txt`
+
+**Status:** Downloads in progress. Script will complete on its own.
 
 ## Work Cycle
 
