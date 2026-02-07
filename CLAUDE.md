@@ -372,6 +372,45 @@ These are legitimate edge cases - not regular homilies or have audio-only format
 
 **Status:** Downloads in progress. Script will complete on its own.
 
+### PDF Text Extraction Strategy
+
+**Investigation Results:**
+- Examined sample English and Spanish PDFs
+- PDFs are **text-based** (not scanned images) - PyPDF2 works well
+- 4-6 pages per homily, reasonable file sizes (50-120KB)
+- Spanish accents preserve correctly
+- Text flows in readable paragraphs
+
+**Extraction Approach:**
+- Use **PyPDF2** (already installed)
+  - Simple, lightweight, pure Python
+  - Sufficient for our single-column text layout
+  - Can switch to PyMuPDF later if we encounter issues
+
+**Text Cleaning Strategy:**
+```python
+def extract_text_from_pdf(pdf_path):
+    # Extract all pages
+    # Join with double newlines
+    # Replace tabs with spaces
+    # Normalize whitespace (multiple spaces → single)
+    # Keep simple - don't try to remove headers/footers yet
+    # Save cleaned text for later refinement if needed
+```
+
+**Challenges Identified:**
+- Tabs (`\t`) throughout text - normalize to spaces
+- Headers on every page ("St Oscar Romero, Homily...")
+- Page numbers embedded in text
+- Minor formatting artifacts
+
+**Decision:** Start simple - extract, clean whitespace, save. Can refine later based on ngram analysis needs.
+
+**Alternative Libraries (for reference):**
+- `pdfplumber`: Better for tables, multi-column layouts, spatial awareness
+- `PyMuPDF` (fitz): Faster, more robust, better for large-scale or damaged PDFs
+- Neither needed for our use case, but good fallback options
+
 ## Work Cycle
 
 Each development session follows this pattern:
