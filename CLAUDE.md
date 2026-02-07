@@ -188,17 +188,20 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 ## Current Status
 
 **Phase:** 0 (Data Collection)
-**Current State:** Index page scraping complete. Database schema designed. Ready to add detail page scraping.
+**Current State:** Metadata collection complete (191/195 Spanish PDFs collected). Ready to create database and download PDFs.
 
 **Completed:**
 - ✓ Index page scraping (`get_homilies_from_index()`)
 - ✓ Database schema design
+- ✓ Detail page scraping (`add_detail_page_data()`)
+- ✓ Full metadata collection with manual fixes
+- ✓ Metadata saved to `data/homilies_metadata.json`
 
 **Next Steps:**
-1. Add detail page scraping to get Spanish titles, PDF URLs, and audio URLs
-2. Create database and write metadata to it
-3. Download PDFs
-4. Extract text from PDFs
+1. Create SQLite database and load metadata
+2. Download all PDFs (191 Spanish + 192 English = ~383 PDFs)
+3. Extract text from PDFs
+4. Store text in database
 
 ---
 
@@ -300,6 +303,35 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 - 4/5 test cases perfect, 1 edge case (missing Spanish PDF) handled gracefully
 - Audio detection working
 - Ready to run on all 195 homilies
+
+### Session 2 (continued): Full Scrape and Manual Fixes
+
+**Execution Results:**
+- Successfully scraped all 195 homilies
+- Initial run had 4 connection errors (connection reset by peer)
+- Retried failed connections successfully
+
+**Final Coverage:**
+- **191/195 Spanish titles and PDFs (98%)**
+- **192/195 English PDFs (98%)**
+- **171/172 Audio URLs (99%)** - 1 with flag but no URL found
+
+**Missing PDFs (4 homilies):**
+1. "Easter Triduum radio message" - English-only (special radio broadcast)
+2. "Teachers in the Model of Vatican II" - Audio-only
+3. "Georgetown University Doctorate" - Audio-only (ceremony, not homily)
+4. "Archbishop Romero was in Rome" - Audio-only (special event)
+
+These are legitimate edge cases - not regular homilies or have audio-only format.
+
+**Manual Fixes Applied:**
+- Retried 4 homilies that had connection errors during initial scrape
+- All 4 successfully retrieved on retry
+- Updated metadata file manually rather than re-running full script
+
+**Key Learning:** Connection errors are transient - retry logic would be useful for production but manual fixes work fine for one-time data collection.
+
+**Status:** Metadata collection complete. Ready for next step (database creation and PDF downloads).
 
 ## Work Cycle
 
