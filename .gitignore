@@ -1,3 +1,9 @@
 venv/
 launch.json
 .claude
+
+# Data files
+data/
+*.pdf
+*.txt
+*.json

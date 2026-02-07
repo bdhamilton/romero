@@ -63,22 +63,22 @@ def extract_text_from_pdf(pdf_path):
         return None
 
 
-def extract_all_pdfs(pdf_dir='data/pdfs', output_dir='data/text'):
+def extract_all_pdfs(homilies_dir='data/homilies', output_dir='data/text'):
     """
-    Extract text from all PDFs in pdf_dir.
+    Extract text from all PDFs in hierarchical homilies directory.
 
     Args:
-        pdf_dir: Directory containing PDFs
+        homilies_dir: Base directory containing homilies/{year}/{month}/{day}/{language}.pdf
         output_dir: Directory to save extracted text files
     """
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
 
-    # Get all PDF files
-    pdf_files = [f for f in os.listdir(pdf_dir) if f.endswith('.pdf')]
-    pdf_files.sort()  # Process in date order
+    # Find all PDF files recursively
+    from pathlib import Path
+    pdf_paths = sorted(Path(homilies_dir).rglob('*.pdf'))
 
-    total = len(pdf_files)
+    total = len(pdf_paths)
     extracted = 0
     skipped = 0
     errors = 0
@@ -87,10 +87,14 @@ def extract_all_pdfs(pdf_dir='data/pdfs', output_dir='data/text'):
     print(f"Output directory: {output_dir}")
     print()
 
-    for i, pdf_file in enumerate(pdf_files, 1):
-        # Generate text filename
-        text_file = pdf_file.replace('.pdf', '.txt')
-        pdf_path = os.path.join(pdf_dir, pdf_file)
+    for i, pdf_path in enumerate(pdf_paths, 1):
+        # Generate text filename: YYYY-MM-DD_language.txt
+        # From: homilies/1977/03/14/spanish.pdf
+        # To:   text/1977-03-14_spanish.txt
+        parts = pdf_path.parts
+        year, month, day, filename = parts[-4], parts[-3], parts[-2], parts[-1]
+        language = filename.replace('.pdf', '')
+        text_file = f"{year}-{month}-{day}_{language}.txt"
         text_path = os.path.join(output_dir, text_file)
 
         # Skip if already extracted
@@ -100,8 +104,8 @@ def extract_all_pdfs(pdf_dir='data/pdfs', output_dir='data/text'):
             continue
 
         # Extract text
-        print(f"[{i}/{total}] Extracting: {pdf_file}")
-        text = extract_text_from_pdf(pdf_path)
+        print(f"[{i}/{total}] Extracting: {pdf_path.name} ({year}-{month}-{day})")
+        text = extract_text_from_pdf(str(pdf_path))
 
         if text is None:
             errors += 1
@@ -142,17 +146,18 @@ if __name__ == "__main__":
     print("="*60)
     print()
 
-    # Check if PDF directory exists
-    if not os.path.exists('data/pdfs'):
-        print("ERROR: data/pdfs directory not found")
-        print("Download PDFs first using download_pdfs.py")
+    # Check if homilies directory exists
+    if not os.path.exists('data/homilies'):
+        print("ERROR: data/homilies directory not found")
+        print("Download and reorganize PDFs first")
         sys.exit(1)
 
     # Count PDFs
-    pdf_count = len([f for f in os.listdir('data/pdfs') if f.endswith('.pdf')])
+    from pathlib import Path
+    pdf_count = len(list(Path('data/homilies').rglob('*.pdf')))
     if pdf_count == 0:
-        print("ERROR: No PDF files found in data/pdfs/")
-        print("Download PDFs first using download_pdfs.py")
+        print("ERROR: No PDF files found in data/homilies/")
+        print("Download and reorganize PDFs first")
         sys.exit(1)
 
     print(f"Ready to extract text from {pdf_count} PDFs")
