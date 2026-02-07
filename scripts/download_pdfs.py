@@ -45,6 +45,8 @@ def download_pdfs(metadata_file='data/homilies_metadata.json',
     downloaded = 0
     skipped = 0
     errors = 0
+    consecutive_failures = 0
+    MAX_CONSECUTIVE_FAILURES = 3
 
     for idx, homily in enumerate(homilies):
         date = homily['date']
@@ -70,10 +72,24 @@ def download_pdfs(metadata_file='data/homilies_metadata.json',
                         f.write(response.content)
 
                     downloaded += 1
+                    consecutive_failures = 0  # Reset on success
 
                 except Exception as e:
                     print(f"  ERROR: {e}")
                     errors += 1
+                    consecutive_failures += 1
+
+                    if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                        print()
+                        print("="*60)
+                        print(f"STOPPING: {MAX_CONSECUTIVE_FAILURES} consecutive failures")
+                        print("This may indicate a problem with the server or network.")
+                        print("You can re-run this script to resume from where it left off.")
+                        print("="*60)
+                        print()
+                        print(f"Downloaded so far: {downloaded}")
+                        print(f"Errors: {errors}")
+                        return
 
         # Download English PDF
         if homily.get('english_pdf_url'):
@@ -96,10 +112,24 @@ def download_pdfs(metadata_file='data/homilies_metadata.json',
                         f.write(response.content)
 
                     downloaded += 1
+                    consecutive_failures = 0  # Reset on success
 
                 except Exception as e:
                     print(f"  ERROR: {e}")
                     errors += 1
+                    consecutive_failures += 1
+
+                    if consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                        print()
+                        print("="*60)
+                        print(f"STOPPING: {MAX_CONSECUTIVE_FAILURES} consecutive failures")
+                        print("This may indicate a problem with the server or network.")
+                        print("You can re-run this script to resume from where it left off.")
+                        print("="*60)
+                        print()
+                        print(f"Downloaded so far: {downloaded}")
+                        print(f"Errors: {errors}")
+                        return
 
     # Summary
     print()
