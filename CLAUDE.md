@@ -188,7 +188,7 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 ## Current Status
 
 **Phase:** 0 (Data Collection)
-**Current State:** PDFs downloading (running in background). Next: text extraction and database creation.
+**Current State:** PDF downloads complete. Text extraction script drafted and ready for review/execution.
 
 **Completed:**
 - ✓ Index page scraping (`get_homilies_from_index()`)
@@ -197,13 +197,13 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 - ✓ Full metadata collection with manual fixes
 - ✓ Metadata saved to `data/homilies_metadata.json`
 - ✓ PDF download script created with safety features
-- ⏳ PDF downloads in progress (~383 PDFs, ~12 minutes total)
+- ✓ PDF downloads complete (371 PDFs: 184 Spanish + 187 English)
+- ✓ Text extraction script drafted (`scripts/extract_text.py`)
 
 **Next Steps:**
-1. Verify PDF downloads completed successfully
-2. Extract text from PDFs
-3. Create SQLite database and load all data
-4. Document Phase 0 completion
+1. Review and run text extraction script
+2. Create SQLite database and load all data
+3. Document Phase 0 completion
 
 ---
 
@@ -372,7 +372,27 @@ These are legitimate edge cases - not regular homilies or have audio-only format
 
 **Status:** Downloads in progress. Script will complete on its own.
 
-### PDF Text Extraction Strategy
+### Session 4: PDF Downloads Complete
+
+**Execution Results:**
+- Successfully downloaded all available PDFs
+- **184 Spanish PDFs** (out of 191 in metadata - 7 missing are the legitimate edge cases)
+- **187 English PDFs** (out of 192 in metadata - 5 missing)
+- **Total: 371 PDFs**
+- No errors, all downloads successful
+- Rate limiting worked perfectly (2-second delay)
+
+**Coverage Analysis:**
+- Spanish coverage: 184/191 = 96% (expected given 4 audio-only homilies)
+- English coverage: 187/192 = 97%
+- Combined: 371 PDFs for 195 homilies
+- Missing PDFs align with previously identified edge cases (audio-only events, special occasions)
+
+**Key Learning:** The resume capability (skipping existing files) made the download process very robust. Even if the script had been interrupted, it could have been restarted without re-downloading.
+
+**Status:** All PDFs successfully downloaded to `data/pdfs/`. No further requests to Romero Trust servers needed.
+
+### Session 5: PDF Text Extraction Script Design
 
 **Investigation Results:**
 - Examined sample English and Spanish PDFs
@@ -389,14 +409,29 @@ These are legitimate edge cases - not regular homilies or have audio-only format
 
 **Text Cleaning Strategy:**
 ```python
+def clean_text(text):
+    # Replace tabs with spaces
+    text = text.replace('\t', ' ')
+    # Normalize whitespace
+    text = re.sub(r' +', ' ', text)  # Multiple spaces → single
+    text = re.sub(r'\n ', '\n', text)  # Spaces after newlines
+    text = re.sub(r' \n', '\n', text)  # Spaces before newlines
+    text = re.sub(r'\n\n\n+', '\n\n', text)  # Multiple newlines → double
+    return text.strip()
+
 def extract_text_from_pdf(pdf_path):
     # Extract all pages
     # Join with double newlines
-    # Replace tabs with spaces
-    # Normalize whitespace (multiple spaces → single)
-    # Keep simple - don't try to remove headers/footers yet
-    # Save cleaned text for later refinement if needed
+    # Clean whitespace
+    # Save to .txt file
 ```
+
+**Script Features:**
+- Resume capability (skips already-extracted files)
+- Progress tracking with counters
+- Error handling (logs errors but continues)
+- Output: UTF-8 encoded .txt files in `data/text/`
+- Summary statistics on completion
 
 **Challenges Identified:**
 - Tabs (`\t`) throughout text - normalize to spaces
@@ -404,12 +439,14 @@ def extract_text_from_pdf(pdf_path):
 - Page numbers embedded in text
 - Minor formatting artifacts
 
-**Decision:** Start simple - extract, clean whitespace, save. Can refine later based on ngram analysis needs.
+**Decision:** Start simple - extract, clean whitespace, save. Can refine later based on ngram analysis needs. Don't try to remove headers/footers yet - that can be done during corpus indexing if needed.
 
 **Alternative Libraries (for reference):**
 - `pdfplumber`: Better for tables, multi-column layouts, spatial awareness
 - `PyMuPDF` (fitz): Faster, more robust, better for large-scale or damaged PDFs
 - Neither needed for our use case, but good fallback options
+
+**Status:** Text extraction script created at `scripts/extract_text.py`. Ready for review and execution.
 
 ## Work Cycle
 
