@@ -249,6 +249,58 @@ From detail pages (e.g., `/1977-homilies/motivation-of-love/`):
 - Audio detection 100% clean (no markers left in references)
 - Ready for detail page scraping
 
+### Session 2: Detail Page Scraping Implementation
+
+**What We Built:**
+- Implemented `add_detail_page_data()` in `scripts/collect-homilies.py`
+- Created `scripts/scrape_all_metadata.py` wrapper script for running full collection
+- Scrapes each homily's detail page for: Spanish title, English PDF URL, Spanish PDF URL, audio URL
+
+**What We Learned:**
+
+*PDF Filename Patterns:*
+- English PDFs: Start with `ART_` prefix (e.g., `ART_Homilies_Vol1_1_Motivation_Love.pdf`)
+- Spanish PDFs: Start with date `YYYY-MM-DD` (e.g., `1977-03-14-Una-motivacion-de-amor.pdf`)
+- Pattern holds for ~97% of homilies
+- Consistent ordering: English PDF listed first, Spanish PDF second
+- Edge case: "Easter Triduum" homily has only 1 PDF
+
+*Audio Files:*
+- Audio URLs found in `<source>` tags or audio links
+- MP3 format hosted on CDN: `romerotrust.b-cdn.net`
+- Only need to look for audio when `has_audio == True` flag is set
+
+*Spanish Titles:*
+- Only available on detail pages (not on index)
+- Extracted from the link text of Spanish PDF
+
+**Decisions Made:**
+
+1. **PDF Categorization Logic:**
+   - Primary: Check filename patterns (`ART_` = English, starts with digits = Spanish)
+   - Fallback: Use order (first = English, second = Spanish)
+   - Graceful degradation: If only 1 PDF found, assign to English slot
+
+2. **Rate Limiting:** 1 second delay between detail page requests
+   - Total time: ~195 seconds (~3 minutes) for all homilies
+   - Respectful of nonprofit server resources
+
+3. **Error Handling:**
+   - Wrap each page fetch in try/except
+   - On error, set fields to None and continue
+   - Log errors but don't stop entire process
+
+4. **Progress Tracking:**
+   - Print progress every 10 homilies
+   - Show first and last homily being processed
+   - Created separate runner script with summary statistics
+
+**Code Status:**
+- `add_detail_page_data()` implemented and tested on 5 homilies
+- 4/5 test cases perfect, 1 edge case (missing Spanish PDF) handled gracefully
+- Audio detection working
+- Ready to run on all 195 homilies
+
 ## Work Cycle
 
 Each development session follows this pattern:
