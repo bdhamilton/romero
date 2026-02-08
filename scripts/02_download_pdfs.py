@@ -2,7 +2,8 @@
 """
 Download all PDF files from Romero Trust website directly into hierarchical structure.
 Uses metadata from homilies_metadata.json.
-Downloads to: homilies/{year}/{month}/{day}/{spanish|english}.pdf
+Downloads to: homilies/{year}/{month}/{day}/{seq}/{spanish|english}.pdf
+where seq is 01, 02, etc. to handle multiple homilies on the same date.
 """
 
 import json
@@ -36,7 +37,7 @@ def download_pdfs(metadata_file='archive/homilies_metadata.json',
     )
 
     print(f"Found {total_pdfs} PDFs to download")
-    print(f"Output structure: {output_base}/{{year}}/{{month}}/{{day}}/{{language}}.pdf")
+    print(f"Output structure: {output_base}/{{year}}/{{month}}/{{day}}/{{seq}}/{{language}}.pdf")
     print(f"Rate limit: {delay} seconds between downloads")
     print()
 
@@ -46,12 +47,21 @@ def download_pdfs(metadata_file='archive/homilies_metadata.json',
     consecutive_failures = 0
     MAX_CONSECUTIVE_FAILURES = 3
 
+    # Track sequence numbers for dates with multiple homilies
+    date_sequences = {}
+
     for idx, homily in enumerate(homilies):
         date = homily['date']  # Format: YYYY-MM-DD
         year, month, day = date.split('-')
 
-        # Create directory for this homily
-        homily_dir = Path(output_base) / year / month / day
+        # Assign sequence number for this date
+        if date not in date_sequences:
+            date_sequences[date] = 0
+        date_sequences[date] += 1
+        seq = f"{date_sequences[date]:02d}"  # 01, 02, etc.
+
+        # Create directory for this homily including sequence
+        homily_dir = Path(output_base) / year / month / day / seq
         homily_dir.mkdir(parents=True, exist_ok=True)
 
         # Download Spanish PDF
@@ -59,14 +69,14 @@ def download_pdfs(metadata_file='archive/homilies_metadata.json',
             filepath = homily_dir / 'spanish.pdf'
 
             if filepath.exists():
-                print(f"[{downloaded + skipped + 1}/{total_pdfs}] Skip (exists): {year}/{month}/{day}/spanish.pdf")
+                print(f"[{downloaded + skipped + 1}/{total_pdfs}] Skip (exists): {year}/{month}/{day}/{seq}/spanish.pdf")
                 skipped += 1
             else:
                 if downloaded > 0:  # Rate limit (skip first)
                     time.sleep(delay)
 
                 try:
-                    print(f"[{downloaded + skipped + 1}/{total_pdfs}] Downloading: {year}/{month}/{day}/spanish.pdf")
+                    print(f"[{downloaded + skipped + 1}/{total_pdfs}] Downloading: {year}/{month}/{day}/{seq}/spanish.pdf")
                     response = requests.get(homily['spanish_pdf_url'], timeout=30)
                     response.raise_for_status()
 
@@ -98,14 +108,14 @@ def download_pdfs(metadata_file='archive/homilies_metadata.json',
             filepath = homily_dir / 'english.pdf'
 
             if filepath.exists():
-                print(f"[{downloaded + skipped + 1}/{total_pdfs}] Skip (exists): {year}/{month}/{day}/english.pdf")
+                print(f"[{downloaded + skipped + 1}/{total_pdfs}] Skip (exists): {year}/{month}/{day}/{seq}/english.pdf")
                 skipped += 1
             else:
                 if downloaded > 0:  # Rate limit
                     time.sleep(delay)
 
                 try:
-                    print(f"[{downloaded + skipped + 1}/{total_pdfs}] Downloading: {year}/{month}/{day}/english.pdf")
+                    print(f"[{downloaded + skipped + 1}/{total_pdfs}] Downloading: {year}/{month}/{day}/{seq}/english.pdf")
                     response = requests.get(homily['english_pdf_url'], timeout=30)
                     response.raise_for_status()
 
@@ -142,7 +152,7 @@ def download_pdfs(metadata_file='archive/homilies_metadata.json',
     print(f"Skipped (already exist): {skipped}")
     print(f"Errors: {errors}")
     print()
-    print(f"PDFs saved to: {output_base}/{{year}}/{{month}}/{{day}}/{{language}}.pdf")
+    print(f"PDFs saved to: {output_base}/{{year}}/{{month}}/{{day}}/{{seq}}/{{language}}.pdf")
 
 
 if __name__ == "__main__":
