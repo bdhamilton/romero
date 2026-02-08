@@ -4,10 +4,9 @@ Master orchestration script to build the complete Romero database from scratch.
 
 This script runs the entire Phase 0 pipeline:
 1. Scrape metadata from Romero Trust website
-2. Download all PDFs
-3. Reorganize PDFs into hierarchical structure
-4. Extract text from PDFs
-5. Create SQLite database and load all data
+2. Download all PDFs into hierarchical structure
+3. Extract text from PDFs
+4. Create SQLite database and load all data
 
 Usage:
     python build_database.py [--skip-scrape] [--skip-download]
@@ -120,8 +119,7 @@ def main():
             sys.exit(1)
 
     if not skip_download:
-        steps.append(('scripts/download_pdfs.py', 'Download all PDFs (~12 min)', True))
-        steps.append(('scripts/reorganize_pdfs.py', 'Reorganize PDFs into date hierarchy', True))
+        steps.append(('scripts/download_pdfs.py', 'Download all PDFs into date hierarchy (~12 min)', True))
     else:
         print("\n⏭  Skipping PDF downloads (using existing PDFs)")
         if not Path('homilies').exists():

@@ -10,20 +10,17 @@ To rebuild the entire database from scratch:
 # 1. Scrape metadata from Romero Trust website
 python scripts/scrape_all_metadata.py
 
-# 2. Download all PDFs (takes ~12 minutes with rate limiting)
+# 2. Download all PDFs directly into hierarchical structure (takes ~12 minutes)
 python scripts/download_pdfs.py
 
-# 3. Reorganize PDFs into hierarchical structure
-python scripts/reorganize_pdfs.py
-
-# 4. Extract text from all PDFs
+# 3. Extract text from all PDFs
 python scripts/extract_text.py
 
-# 5. Create SQLite database and load all data
+# 4. Create SQLite database and load all data
 python scripts/create_database.py
 ```
 
-**Result:** `data/romero.db` - SQLite database with 195 homilies, metadata, and extracted text.
+**Result:** `romero.db` - SQLite database with 195 homilies, metadata, and extracted text.
 
 ---
 
@@ -38,17 +35,17 @@ python scripts/create_database.py
 - Saves to `data/homilies_metadata.json`
 
 **Output:**
-- `data/homilies_metadata.json` - Complete metadata for all homilies
+- `archive/homilies_metadata.json` - Complete metadata for all homilies
 
 **Rate limiting:** 1 second between requests
 
 ---
 
 #### 2. `download_pdfs.py`
-**What it does:** Downloads all PDFs from Romero Trust
-- Reads metadata from `homilies_metadata.json`
+**What it does:** Downloads all PDFs from Romero Trust directly into hierarchical structure
+- Reads metadata from `archive/homilies_metadata.json`
 - Downloads ~371 PDFs (184 Spanish + 187 English)
-- Saves to `data/pdfs/` with naming: `YYYY-MM-DD_{language}_{index}.pdf`
+- Saves directly to `homilies/{year}/{month}/{day}/{language}.pdf`
 
 **Features:**
 - Resume capability (skips existing files)
@@ -57,28 +54,13 @@ python scripts/create_database.py
 - Progress tracking and summary
 
 **Output:**
-- `data/pdfs/` - All downloaded PDFs
-- `data/download_log.txt` - Download log
+- `homilies/{year}/{month}/{day}/{language}.pdf` - All PDFs in final structure
 
 **Time:** ~12 minutes
 
 ---
 
-#### 3. `reorganize_pdfs.py`
-**What it does:** Reorganizes flat PDF structure into hierarchical by date
-- Moves PDFs from `data/pdfs/YYYY-MM-DD_language_NNN.pdf`
-- To `data/homilies/{year}/{month}/{day}/{language}.pdf`
-
-**Why:** Easier to navigate, matches text extraction output structure
-
-**Output:**
-- `data/homilies/{year}/{month}/{day}/{language}.pdf` - Reorganized PDFs
-
-**Safe:** Creates copies, doesn't delete originals from `data/pdfs/`
-
----
-
-#### 4. `extract_text.py`
+#### 3. `extract_text.py`
 **What it does:** Extracts text from all PDFs using pdfplumber
 - Reads PDFs from hierarchical structure
 - Comprehensive text cleaning:
@@ -89,7 +71,7 @@ python scripts/create_database.py
 - Saves text files alongside PDFs
 
 **Output:**
-- `data/homilies/{year}/{month}/{day}/{language}.txt` - Cleaned text files (358 files)
+- `homilies/{year}/{month}/{day}/{language}.txt` - Cleaned text files (358 files)
 
 **Library:** Uses pdfplumber (not PyPDF2) for perfect multi-column handling
 
@@ -106,7 +88,7 @@ python scripts/create_database.py
 - Verifies data integrity
 
 **Output:**
-- `data/romero.db` - SQLite database (12.76 MB)
+- `romero.db` - SQLite database (12.76 MB)
 
 **Contains:**
 - 195 homilies
@@ -165,23 +147,19 @@ Romero Trust Website
         ↓
 [scrape_all_metadata.py]
         ↓
-data/homilies_metadata.json
+archive/homilies_metadata.json
         ↓
 [download_pdfs.py]
         ↓
-data/pdfs/*.pdf
-        ↓
-[reorganize_pdfs.py]
-        ↓
-data/homilies/{year}/{month}/{day}/*.pdf
+homilies/{year}/{month}/{day}/*.pdf
         ↓
 [extract_text.py]
         ↓
-data/homilies/{year}/{month}/{day}/*.txt
+homilies/{year}/{month}/{day}/*.txt
         ↓
 [create_database.py]
         ↓
-data/romero.db (SQLite)
+romero.db (SQLite)
 ```
 
 ---
