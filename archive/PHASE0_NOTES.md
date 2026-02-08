@@ -58,10 +58,28 @@ text = re.sub(r'([^\s])\n([^\s])', r'\1 \2', text)
 
 ## Results
 - **Total PDFs processed**: 358
+- **Total homilies**: 195 (8 dates have 2 homilies each)
 - **Extraction errors**: 0
-- **Output location**: `data/homilies/{year}/{month}/{day}/{language}.txt`
+- **Output location**: `homilies/{year}/{month}/{day}/{prefix}{language}.txt`
 - **Data quality**: Clean text with no headers, footers, page numbers, or run-together words
 - **Preserved content**: Biblical references (EN 30, Mt 25:40), footnotes, and all homily text
+
+## Handling Duplicate Dates
+**Issue**: 8 dates have 2 homilies (16 total homilies across these dates)
+- 1977-05-15, 1977-06-19
+- 1978-03-05, 1978-03-23, 1978-12-24, 1978-12-31
+- 1979-04-12, 1979-11-25
+
+**Solution**: Filename prefixes (not subdirectories)
+- Single homily: `homilies/1977/03/14/spanish.pdf`
+- Multiple homilies: `homilies/1977/05/15/1_spanish.pdf`, `homilies/1977/05/15/2_spanish.pdf`
+- Prefix only appears when needed (cleaner structure)
+
+**Database loading**: Matches by sequence number
+- Parses filename prefix to determine occurrence (1st, 2nd)
+- Queries all rows for date, ordered by ID (matches JSON order)
+- Updates specific row by ID instead of by date alone
+- No additional database columns required
 
 ## Files
 - `scripts/extract_text.py`: Full corpus extraction
