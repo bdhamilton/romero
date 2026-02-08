@@ -274,6 +274,13 @@ def main():
     print(f"Database location: {db_path}")
     print()
 
+    # Delete existing database to ensure clean slate
+    # This makes the script idempotent (safe to run multiple times)
+    if Path(db_path).exists():
+        print(f"Removing existing database: {db_path}")
+        Path(db_path).unlink()
+        print()
+
     # Connect to database (creates file if doesn't exist)
     with sqlite3.connect(db_path) as conn:
         # Enable foreign key support (not used yet, but good practice)
