@@ -63,17 +63,14 @@ def extract_text_from_pdf(pdf_path):
         return None
 
 
-def extract_all_pdfs(homilies_dir='data/homilies', output_dir='data/text'):
+def extract_all_pdfs(homilies_dir='data/homilies'):
     """
     Extract text from all PDFs in hierarchical homilies directory.
+    Text files are saved alongside PDFs: {language}.pdf → {language}.txt
 
     Args:
         homilies_dir: Base directory containing homilies/{year}/{month}/{day}/{language}.pdf
-        output_dir: Directory to save extracted text files
     """
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
-
     # Find all PDF files recursively
     from pathlib import Path
     pdf_paths = sorted(Path(homilies_dir).rglob('*.pdf'))
@@ -84,22 +81,21 @@ def extract_all_pdfs(homilies_dir='data/homilies', output_dir='data/text'):
     errors = 0
 
     print(f"Found {total} PDF files to process")
-    print(f"Output directory: {output_dir}")
+    print(f"Text files will be saved alongside PDFs")
     print()
 
     for i, pdf_path in enumerate(pdf_paths, 1):
-        # Generate text filename: YYYY-MM-DD_language.txt
+        # Generate text filename alongside PDF
         # From: homilies/1977/03/14/spanish.pdf
-        # To:   text/1977-03-14_spanish.txt
+        # To:   homilies/1977/03/14/spanish.txt
+        text_path = pdf_path.with_suffix('.txt')
+
         parts = pdf_path.parts
-        year, month, day, filename = parts[-4], parts[-3], parts[-2], parts[-1]
-        language = filename.replace('.pdf', '')
-        text_file = f"{year}-{month}-{day}_{language}.txt"
-        text_path = os.path.join(output_dir, text_file)
+        year, month, day = parts[-4], parts[-3], parts[-2]
 
         # Skip if already extracted
-        if os.path.exists(text_path):
-            print(f"[{i}/{total}] Skip (exists): {text_file}")
+        if text_path.exists():
+            print(f"[{i}/{total}] Skip (exists): {text_path.name} ({year}-{month}-{day})")
             skipped += 1
             continue
 
@@ -113,7 +109,7 @@ def extract_all_pdfs(homilies_dir='data/homilies', output_dir='data/text'):
 
         # Save to text file
         try:
-            with open(text_path, 'w', encoding='utf-8') as f:
+            with open(str(text_path), 'w', encoding='utf-8') as f:
                 f.write(text)
 
             # Show sample (first 100 chars)
@@ -135,7 +131,7 @@ def extract_all_pdfs(homilies_dir='data/homilies', output_dir='data/text'):
     print(f"Skipped (already exist): {skipped}")
     print(f"Errors: {errors}")
     print()
-    print(f"Text files saved to: {output_dir}")
+    print(f"Text files saved alongside PDFs in: {homilies_dir}")
 
 
 if __name__ == "__main__":
