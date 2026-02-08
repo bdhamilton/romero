@@ -1,0 +1,16 @@
+# Romero Ngram Viewer - Python Dependencies
+# Phase 0: Data Collection & Processing
+
+# Web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# PDF text extraction
+pdfplumber>=0.10.0
+
+# Database (built-in to Python)
+# sqlite3 is included in Python standard library
+
+# Phase 1 dependencies (to be added):
+# flask>=3.0.0  # or fastapi>=0.100.0
+# unicodedata (built-in)
