@@ -13,10 +13,10 @@ cd romero
 
 # 2. Set up Python environment
 python3 -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
+source venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Run data collection pipeline (takes ~15 minutes)
+# 3. Run data collection pipeline (takes ~20 minutes)
 python ./build_database.py
 
 # Result: romero.db (SQLite database with full corpus)
