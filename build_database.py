@@ -114,8 +114,8 @@ def main():
         steps.append(('scripts/scrape_all_metadata.py', 'Scrape metadata from Romero Trust', False))
     else:
         print("\n⏭  Skipping metadata scraping (using existing data)")
-        if not Path('data/homilies_metadata.json').exists():
-            print("❌ ERROR: data/homilies_metadata.json not found")
+        if not Path('archive/homilies_metadata.json').exists():
+            print("❌ ERROR: archive/homilies_metadata.json not found")
             print("   Cannot skip scraping without existing metadata file")
             sys.exit(1)
 
@@ -124,8 +124,8 @@ def main():
         steps.append(('scripts/reorganize_pdfs.py', 'Reorganize PDFs into date hierarchy', True))
     else:
         print("\n⏭  Skipping PDF downloads (using existing PDFs)")
-        if not Path('data/homilies').exists():
-            print("❌ ERROR: data/homilies/ directory not found")
+        if not Path('homilies').exists():
+            print("❌ ERROR: homilies/ directory not found")
             print("   Cannot skip downloads without existing PDFs")
             sys.exit(1)
 
@@ -167,12 +167,12 @@ def main():
     print("✓ PIPELINE COMPLETE!")
     print("="*70)
     print(f"\nTotal time: {minutes}m {seconds}s")
-    print(f"\nDatabase location: data/romero.db")
+    print(f"\nDatabase location: romero.db")
 
     # Show database stats
     try:
         import sqlite3
-        conn = sqlite3.connect('data/romero.db')
+        conn = sqlite3.connect('romero.db')
         cursor = conn.cursor()
 
         cursor.execute('SELECT COUNT(*) FROM homilies')
@@ -193,7 +193,7 @@ def main():
         min_date, max_date = cursor.fetchone()
         print(f"  Date range: {min_date} to {max_date}")
 
-        db_size = Path('data/romero.db').stat().st_size / 1024 / 1024
+        db_size = Path('romero.db').stat().st_size / 1024 / 1024
         print(f"  File size: {db_size:.2f} MB")
 
         conn.close()

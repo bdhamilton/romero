@@ -87,7 +87,7 @@ def extract_text_from_pdf(pdf_path):
         return None
 
 
-def extract_all_pdfs(homilies_dir='data/homilies'):
+def extract_all_pdfs(homilies_dir='homilies'):
     """
     Extract text from all PDFs in hierarchical homilies directory.
     Text files are saved alongside PDFs: {language}.pdf → {language}.txt
@@ -167,16 +167,16 @@ if __name__ == "__main__":
     print()
 
     # Check if homilies directory exists
-    if not os.path.exists('data/homilies'):
-        print("ERROR: data/homilies directory not found")
+    if not os.path.exists('homilies'):
+        print("ERROR: homilies directory not found")
         print("Download and reorganize PDFs first")
         sys.exit(1)
 
     # Count PDFs
     from pathlib import Path
-    pdf_count = len(list(Path('data/homilies').rglob('*.pdf')))
+    pdf_count = len(list(Path('homilies').rglob('*.pdf')))
     if pdf_count == 0:
-        print("ERROR: No PDF files found in data/homilies/")
+        print("ERROR: No PDF files found in homilies/")
         print("Download and reorganize PDFs first")
         sys.exit(1)
 

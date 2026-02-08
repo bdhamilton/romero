@@ -40,7 +40,7 @@ if __name__ == "__main__":
     homilies = add_detail_page_data(homilies, delay=1.0)
 
     # Save results
-    output_file = "data/homilies_metadata.json"
+    output_file = "archive/homilies_metadata.json"
     os.makedirs("data", exist_ok=True)
 
     with open(output_file, 'w', encoding='utf-8') as f:

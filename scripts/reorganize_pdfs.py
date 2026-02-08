@@ -2,7 +2,7 @@
 """
 Reorganize PDFs into hierarchical directory structure.
 From: data/pdfs/YYYY-MM-DD_{language}_{index}.pdf
-To:   data/homilies/{year}/{month}/{day}/{spanish|english}.pdf
+To:   homilies/{year}/{month}/{day}/{spanish|english}.pdf
 """
 
 import os
@@ -10,7 +10,7 @@ import shutil
 from pathlib import Path
 
 
-def reorganize_pdfs(source_dir='data/pdfs', target_base='data/homilies'):
+def reorganize_pdfs(source_dir='data/pdfs', target_base='homilies'):
     """
     Reorganize PDFs into year/month/day/language.pdf structure.
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     print(f"Will reorganize {pdf_count} PDFs")
     print("From: data/pdfs/YYYY-MM-DD_language_index.pdf")
-    print("To:   data/homilies/year/month/day/language.pdf")
+    print("To:   homilies/year/month/day/language.pdf")
     print()
 
     response = input("Continue? [y/N] ")

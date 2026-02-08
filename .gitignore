@@ -1,9 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
-launch.json
-.claude
+ENV/
+env/
 
-# Data files
-data/
-*.pdf
-*.txt
-*.json
+# Project-specific
+homilies/
+*.db
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db

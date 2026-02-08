@@ -11,7 +11,7 @@ import requests
 from pathlib import Path
 
 
-def download_pdfs(metadata_file='data/homilies_metadata.json',
+def download_pdfs(metadata_file='archive/homilies_metadata.json',
                   output_dir='data/pdfs',
                   delay=2.0):
     """
@@ -148,8 +148,8 @@ if __name__ == "__main__":
     import sys
 
     # Check if metadata exists
-    if not os.path.exists('data/homilies_metadata.json'):
-        print("ERROR: data/homilies_metadata.json not found")
+    if not os.path.exists('archive/homilies_metadata.json'):
+        print("ERROR: archive/homilies_metadata.json not found")
         print("Run scrape_all_metadata.py first")
         sys.exit(1)
 
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     print()
 
     # Estimate time
-    with open('data/homilies_metadata.json', 'r') as f:
+    with open('archive/homilies_metadata.json', 'r') as f:
         homilies = json.load(f)
 
     pdf_count = sum(

@@ -5,7 +5,7 @@ Create SQLite database and load all homily data.
 This script:
 1. Creates the database schema
 2. Loads metadata from homilies_metadata.json
-3. Loads extracted text from data/homilies/{year}/{month}/{day}/{language}.txt
+3. Loads extracted text from homilies/{year}/{month}/{day}/{language}.txt
 4. Stores everything in a single SQLite database file
 
 SQLite Concepts Used:
@@ -99,7 +99,7 @@ def load_metadata(conn):
     - Data integrity: No partial/corrupt state
     """
     # Load JSON metadata
-    with open('data/homilies_metadata.json', 'r') as f:
+    with open('archive/homilies_metadata.json', 'r') as f:
         homilies = json.load(f)
 
     print(f"Loading {len(homilies)} homilies from metadata...")
@@ -151,14 +151,14 @@ def load_text_files(conn):
     cursor = conn.cursor()
 
     # Find all text files
-    text_files = list(Path('data/homilies').rglob('*.txt'))
+    text_files = list(Path('homilies').rglob('*.txt'))
     print(f"Found {len(text_files)} text files")
 
     spanish_count = 0
     english_count = 0
 
     for text_path in text_files:
-        # Parse path: data/homilies/1977/03/14/spanish.txt
+        # Parse path: homilies/1977/03/14/spanish.txt
         parts = text_path.parts
         year = parts[-4]
         month = parts[-3]
@@ -267,7 +267,7 @@ def main():
     - Automatically rolls back on error
     - Automatically closes connection
     """
-    db_path = 'data/romero.db'
+    db_path = 'romero.db'
 
     print("Creating Romero Homilies Database")
     print("=" * 60)
