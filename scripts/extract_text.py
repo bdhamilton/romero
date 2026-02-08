@@ -2,22 +2,47 @@
 """
 Extract text from all downloaded PDFs.
 Performs basic cleaning: normalize whitespace, remove tabs.
+Uses pdfplumber for better column handling than PyPDF2.
 """
 
 import os
 import re
-from PyPDF2 import PdfReader
+import pdfplumber
 
 
 def clean_text(text):
     """
     Clean extracted PDF text.
 
+    - Fix hyphenated words split across lines
+    - Add spaces where newlines were removed without spacing
+    - Remove headers, footers, and page numbers
     - Replace tabs with spaces
     - Normalize multiple spaces to single space
     - Normalize multiple newlines
     - Strip leading/trailing whitespace
     """
+    # First: Fix hyphenated words across line breaks: "herma-\nnos" → "hermanos"
+    # MUST be done before adding spaces at newlines!
+    text = re.sub(r'-\n', '', text)
+
+    # Second: Add space where newline separates words: "la\nrica" → "la rica"
+    # Match non-whitespace, newline, non-whitespace
+    text = re.sub(r'([^\s])\n([^\s])', r'\1 \2', text)
+
+    # Remove common headers and footers
+    # Spanish running headers: "‡ Ciclo C, 1977 ‡", "‡ Homilías de Monseñor Romero ‡"
+    text = re.sub(r'‡\s*Ciclo [ABC],\s*\d{4}\s*‡', '', text)
+    text = re.sub(r'‡\s*Homilías de Monseñor Romero\s*‡', '', text)
+
+    # English running headers: "St Oscar Romero, ...", "Read or listen to..."
+    text = re.sub(r'St Oscar Romero,.*?(?:\d{1,2} [A-Z][a-z]+ \d{4}|\d+ [A-Z][a-z]+ \d{4})', '', text)
+    text = re.sub(r'Read or listen to the homilies of St Oscar Romero at romerotrust\.org\.uk', '', text)
+
+    # Remove standalone page numbers (digits on their own line or at end of line)
+    text = re.sub(r'\n\d+\s*\n', '\n', text)  # Page number on its own line
+    text = re.sub(r'\s+\d+\s*$', '', text, flags=re.MULTILINE)  # Page number at end of line
+
     # Replace tabs with spaces
     text = text.replace('\t', ' ')
 
@@ -32,7 +57,7 @@ def clean_text(text):
 
 def extract_text_from_pdf(pdf_path):
     """
-    Extract and clean text from a PDF file.
+    Extract and clean text from a PDF file using pdfplumber.
 
     Args:
         pdf_path: Path to PDF file
@@ -41,22 +66,21 @@ def extract_text_from_pdf(pdf_path):
         Cleaned text string, or None if extraction fails
     """
     try:
-        reader = PdfReader(pdf_path)
+        with pdfplumber.open(pdf_path) as pdf:
+            # Extract text from all pages
+            all_text = []
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    all_text.append(text)
 
-        # Extract text from all pages
-        all_text = []
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                all_text.append(text)
+            # Join pages with double newline
+            full_text = "\n\n".join(all_text)
 
-        # Join pages with double newline
-        full_text = "\n\n".join(all_text)
+            # Clean the text
+            cleaned = clean_text(full_text)
 
-        # Clean the text
-        cleaned = clean_text(full_text)
-
-        return cleaned
+            return cleaned
 
     except Exception as e:
         print(f"  ERROR extracting text: {e}")

@@ -448,6 +448,90 @@ def extract_text_from_pdf(pdf_path):
 
 **Status:** Text extraction script created at `scripts/extract_text.py`. Ready for review and execution.
 
+### Session 6: PDF Text Extraction - Library Selection and Quality Issues
+
+**Investigation:**
+- Initial PyPDF2 extraction revealed word concatenation issues in multi-column PDFs
+- Examples: "larica" (should be "la rica"), "pastoralde" (should be "pastoral de")
+- Root cause: PyPDF2 doesn't detect column boundaries, extracts words touching without newlines
+
+**Testing Alternative Libraries:**
+- Tested pdfplumber and pdfminer.six on problem PDF (1977-03-14 Spanish)
+- **Results:**
+  - PyPDF2: 3 concatenation problems found
+  - pdfplumber: 0 problems found ✓
+  - pdfminer.six: 0 problems found ✓
+
+**Decision:** Switched from PyPDF2 to **pdfplumber**
+- Perfect column boundary detection
+- Cleaner API than pdfminer.six
+- Zero word concatenation issues
+
+**Text Cleaning Pipeline (Final):**
+
+1. Fix hyphenated words across line breaks
+   - Pattern: `r'-\n'` → empty string
+   - Example: "herma-\nnos" → "hermanos"
+
+2. Add spaces where newlines separate words
+   - Pattern: `r'([^\s])\n([^\s])'` → `r'\1 \2'`
+   - Example: "Iglesia\nuniversal" → "Iglesia universal"
+
+3. Remove headers and footers
+   - Spanish: "‡ Ciclo C, 1977 ‡", "‡ Homilías de Monseñor Romero ‡"
+   - English: "St Oscar Romero, [Title], [Date]", "Read or listen to... romerotrust.org.uk"
+
+4. Remove page numbers
+   - Standalone: `\n\d+\s*\n`
+   - End of line: `\s+\d+\s*$`
+
+5. Normalize whitespace
+   - Replace tabs with spaces
+   - Multiple spaces → single space
+   - Clean spaces around newlines
+   - Multiple newlines → double newline
+
+**Critical: Regex Order**
+```python
+# 1. FIRST: Remove hyphens at line breaks
+text = re.sub(r'-\n', '', text)
+
+# 2. SECOND: Add spaces at newlines
+text = re.sub(r'([^\s])\n([^\s])', r'\1 \2', text)
+
+# 3. THIRD: Remove headers/footers/page numbers
+# 4. FOURTH: Normalize whitespace
+```
+
+Order matters! If you add spaces first, `-\nn` becomes `- n`, breaking hyphen removal.
+
+**Header/Footer Pattern Verification:**
+- Tested samples across all years (1977, 1978, 1979, 1980)
+- Patterns consistent throughout corpus
+- All headers, footers, page numbers successfully removed
+
+**Execution Results:**
+- Successfully extracted all 358 PDFs
+- 0 extraction errors
+- Output: `data/homilies/{year}/{month}/{day}/{language}.txt`
+- Clean text with no run-together words, headers, or page numbers
+
+**Known Acceptable Artifacts:**
+- Occasional inline footnotes (e.g., "1El saludo y las palabras iniciales no están registradas...")
+- Footnote markers are just digits, hard to distinguish from legitimate numbers
+- Frequency is low, doesn't impact ngram search functionality
+- Manual cleanup would be expensive and not worth the effort
+
+**Files Created:**
+- `scripts/extract_samples.py` - Sample extraction for testing (4 files)
+- `scripts/test_headers.py` - Header pattern verification
+- `scripts/debug_cleaning.py` - Regex pattern debugging
+- `PHASE0_NOTES.md` - Detailed extraction documentation
+
+**Key Learning:** Testing alternative libraries early saved significant time. User feedback ("not sure it's acceptable noise", "test other extractors first") led to much better solution than trying to fix PyPDF2 issues with regex.
+
+**Status:** Phase 0 COMPLETE. All 358 text files extracted with high quality. Ready for Phase 1 (Database Design).
+
 ## Work Cycle
 
 Each development session follows this pattern:
