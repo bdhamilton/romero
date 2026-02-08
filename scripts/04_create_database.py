@@ -118,9 +118,9 @@ def load_metadata(conn):
         ''', (
             homily['date'],
             homily.get('occasion'),
-            homily.get('english_title'),
+            homily.get('title'),  # JSON has 'title' not 'english_title'
             homily.get('spanish_title'),
-            homily.get('detail_url'),
+            homily.get('url'),  # JSON has 'url' not 'detail_url'
             homily.get('biblical_references'),
             homily.get('spanish_pdf_url'),
             homily.get('english_pdf_url'),

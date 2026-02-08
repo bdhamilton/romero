@@ -19,17 +19,20 @@ All data collected, processed, and stored in SQLite database. Ready for Phase 1 
 - ✓ Downloaded 371 PDFs (Spanish and English)
 - ✓ Extracted and cleaned text with pdfplumber
 - ✓ Created SQLite database with full corpus
+- ✓ Built web interface for browsing and reviewing homilies
 
 ### What Works Now
 - Complete database of 195 homilies (1977-03-14 to 1980-03-24)
 - 185 Spanish texts, 189 English texts
 - Cleaned text (no headers, footers, page numbers)
 - All metadata preserved (dates, occasions, biblical references)
+- Flask web app with table-based index for easy browsing
+- Direct access to local PDF files from web interface
 
 ### Next Steps (Phase 1)
 - Build ngram search index
 - Command-line query tool
-- Web interface with time-series visualization
+- Time-series visualization
 
 ## Quick Start
 
@@ -46,21 +49,35 @@ source venv/bin/activate  # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
 
 # 3. Run data collection pipeline (takes ~15 minutes)
-python scripts/scrape_all_metadata.py
-python scripts/download_pdfs.py
-python scripts/reorganize_pdfs.py
-python scripts/extract_text.py
-python scripts/create_database.py
+python scripts/01_scrape_metadata.py
+python scripts/02_download_pdfs.py
+python scripts/03_extract_text.py
+python scripts/04_create_database.py
 
-# Result: data/romero.db (SQLite database with full corpus)
+# Result: romero.db (SQLite database with full corpus)
 ```
 
-See `scripts/README.md` for detailed documentation of each script.
+See individual scripts for detailed documentation (each script has extensive inline comments).
+
+### Browse the Homilies
+
+```bash
+# Start the web interface
+python app.py
+
+# Open http://localhost:5000 in your browser
+```
+
+The web interface provides:
+- Complete table of all 195 homilies with metadata
+- Links to original detail pages on Romero Trust website
+- Direct access to downloaded PDF files (both Spanish and English)
+- Visual indicators for available/missing texts
 
 ### Explore the Database
 
 ```bash
-sqlite3 data/romero.db
+sqlite3 romero.db
 
 # Example queries:
 SELECT COUNT(*) FROM homilies;
@@ -72,28 +89,37 @@ SELECT AVG(LENGTH(spanish_text)) FROM homilies WHERE spanish_text IS NOT NULL;
 
 ```
 romero/
-├── data/
-│   ├── romero.db              # SQLite database (output)
-│   ├── homilies_metadata.json # Scraped metadata
-│   ├── homilies/              # Hierarchical text & PDF storage
-│   │   └── {year}/{month}/{day}/
-│   │       ├── spanish.pdf
-│   │       ├── spanish.txt
-│   │       ├── english.pdf
-│   │       └── english.txt
-│   └── pdfs/                  # Original downloaded PDFs
+├── romero.db                  # SQLite database (output)
+├── archive/
+│   └── homilies_metadata.json # Scraped metadata
 │
-├── scripts/                   # Data collection scripts
-│   ├── README.md             # Script documentation
-│   ├── scrape_all_metadata.py
-│   ├── download_pdfs.py
-│   ├── reorganize_pdfs.py
-│   ├── extract_text.py
-│   └── create_database.py
+├── homilies/                  # Hierarchical text & PDF storage
+│   └── {year}/{month}/{day}/
+│       ├── spanish.pdf
+│       ├── spanish.txt
+│       ├── english.pdf
+│       └── english.txt
 │
+├── scripts/                   # Data collection pipeline
+│   ├── 01_scrape_metadata.py
+│   ├── 02_download_pdfs.py
+│   ├── 03_extract_text.py
+│   └── 04_create_database.py
+│
+├── templates/                 # Web interface templates
+│   ├── base.html
+│   ├── index.html            # Main table view
+│   └── homily.html           # Detail page (not currently used)
+│
+├── static/
+│   └── css/
+│       └── style.css         # Web interface styling
+│
+├── app.py                     # Flask web application
+├── requirements.txt           # Python dependencies
 ├── CLAUDE.md                  # Development log & decisions
-├── PHASE0_NOTES.md           # Text extraction documentation
-└── README.md                 # This file
+├── PHASE0_PLAN.md            # Phase 0 implementation plan
+└── README.md                  # This file
 ```
 
 ## Data Source
@@ -112,8 +138,8 @@ All homilies sourced from [The Romero Trust](https://www.romerotrust.org.uk/homi
 - **SQLite** - Database (single file, ~13 MB)
 - **pdfplumber** - PDF text extraction (handles multi-column layouts)
 - **BeautifulSoup4** - Web scraping
-- **Flask/FastAPI** (Phase 1) - Web interface
-- **Chart.js** (Phase 1) - Time-series visualization
+- **Flask** - Web interface for browsing homilies
+- **Chart.js** (Phase 1) - Time-series visualization (coming soon)
 
 ## Development Workflow
 

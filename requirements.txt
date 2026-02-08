@@ -11,6 +11,5 @@ pdfplumber>=0.10.0
 # Database (built-in to Python)
 # sqlite3 is included in Python standard library
 
-# Phase 1 dependencies (to be added):
-# flask>=3.0.0  # or fastapi>=0.100.0
-# unicodedata (built-in)
+# Phase 1: Web Application
+flask>=3.0.0

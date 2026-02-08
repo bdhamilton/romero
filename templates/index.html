@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Homilies Index - Romero Archive{% endblock %}
+
+{% block content %}
+<div class="homilies-table">
+    <div class="header">
+        <h2>Complete Index</h2>
+        <p>{{ homilies|length }} homilies • March 1977 - March 1980</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date / Occasion</th>
+                <th>Title</th>
+                <th>Biblical References</th>
+                <th>ES</th>
+                <th>EN</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for homily in homilies %}
+            <tr>
+                <td class="date-occasion">
+                    <div class="date">{{ homily['date'] }}</div>
+                    <div class="occasion">{{ homily['occasion'] or '—' }}</div>
+                </td>
+                <td class="title">
+                    {% if homily['spanish_title'] and homily['english_title'] %}
+                    <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['spanish_title'] }}</a> <span class="english-subtitle">({{ homily['english_title'] }})</span>
+                    {% elif homily['spanish_title'] %}
+                    <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['spanish_title'] }}</a>
+                    {% elif homily['english_title'] %}
+                    <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['english_title'] }}</a>
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td class="biblical-refs">{{ homily['biblical_references'] or '—' }}</td>
+                <td class="status">
+                    {% if homily['has_spanish'] and homily['spanish_pdf_path'] %}
+                    <a href="{{ url_for('serve_pdf', pdf_path=homily['spanish_pdf_path']) }}" target="_blank" class="check">✓</a>
+                    {% elif homily['has_spanish'] %}
+                    <span class="check">✓</span>
+                    {% else %}
+                    <span class="missing">✗</span>
+                    {% endif %}
+                </td>
+                <td class="status">
+                    {% if homily['has_english'] and homily['english_pdf_path'] %}
+                    <a href="{{ url_for('serve_pdf', pdf_path=homily['english_pdf_path']) }}" target="_blank" class="check">✓</a>
+                    {% elif homily['has_english'] %}
+                    <span class="check">✓</span>
+                    {% else %}
+                    <span class="missing">✗</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
