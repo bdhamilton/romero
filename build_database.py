@@ -2,7 +2,7 @@
 """
 Master orchestration script to build the complete Romero database from scratch.
 
-This script runs the entire Phase 0 pipeline:
+This script runs the entire data collection pipeline:
 1. Scrape metadata from Romero Trust website
 2. Download all PDFs into hierarchical structure
 3. Extract text from PDFs
@@ -22,7 +22,6 @@ Time estimate:
 
 import subprocess
 import sys
-import os
 from pathlib import Path
 import time
 
@@ -97,8 +96,8 @@ def main():
 
     print("""
 ╔═══════════════════════════════════════════════════════════════════╗
-║           Romero Ngram Viewer - Database Builder                  ║
-║                     Phase 0: Data Collection                      ║
+║            Romero Ngram Viewer - Data Collection                  ║
+║          Builds database from Romero Trust website                ║
 ╚═══════════════════════════════════════════════════════════════════╝
     """)
 
@@ -110,7 +109,7 @@ def main():
     steps = []
 
     if not skip_scrape:
-        steps.append(('scripts/scrape_all_metadata.py', 'Scrape metadata from Romero Trust', False))
+        steps.append(('scripts/01_scrape_all_metadata.py', 'Scrape metadata from Romero Trust', False))
     else:
         print("\n⏭  Skipping metadata scraping (using existing data)")
         if not Path('archive/homilies_metadata.json').exists():
@@ -119,7 +118,7 @@ def main():
             sys.exit(1)
 
     if not skip_download:
-        steps.append(('scripts/download_pdfs.py', 'Download all PDFs into date hierarchy (~12 min)', True))
+        steps.append(('scripts/02_download_pdfs.py', 'Download all PDFs into date hierarchy (~12 min)', True))
     else:
         print("\n⏭  Skipping PDF downloads (using existing PDFs)")
         if not Path('homilies').exists():
@@ -128,8 +127,8 @@ def main():
             sys.exit(1)
 
     # These steps always run
-    steps.append(('scripts/extract_text.py', 'Extract text from all PDFs', True))
-    steps.append(('scripts/create_database.py', 'Create SQLite database and load data', False))
+    steps.append(('scripts/03_extract_text.py', 'Extract text from all PDFs', True))
+    steps.append(('scripts/04_create_database.py', 'Create SQLite database and load data', False))
 
     # Summary
     print(f"\nPipeline: {len(steps)} steps to execute")
