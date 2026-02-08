@@ -45,16 +45,19 @@ python scripts/create_database.py
 **What it does:** Downloads all PDFs from Romero Trust directly into hierarchical structure
 - Reads metadata from `archive/homilies_metadata.json`
 - Downloads ~371 PDFs (184 Spanish + 187 English)
-- Saves directly to `homilies/{year}/{month}/{day}/{language}.pdf`
+- Saves to `homilies/{year}/{month}/{day}/{prefix}{language}.pdf`
+- Prefix is "1_", "2_", etc. ONLY for the 8 dates with multiple homilies
 
 **Features:**
 - Resume capability (skips existing files)
 - 2-second rate limiting between downloads
 - Stops after 3 consecutive failures
 - Progress tracking and summary
+- Smart filename prefixing (only when needed)
 
 **Output:**
-- `homilies/{year}/{month}/{day}/{language}.pdf` - All PDFs in final structure
+- `homilies/{year}/{month}/{day}/{language}.pdf` - Most homilies (no prefix)
+- `homilies/{year}/{month}/{day}/{seq}_{language}.pdf` - 8 dates with duplicates
 
 **Time:** ~12 minutes
 

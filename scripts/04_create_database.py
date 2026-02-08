@@ -147,39 +147,77 @@ def load_text_files(conn):
     - INSERT: Create new row
     - UPDATE: Modify existing row
     We're updating rows that were created by load_metadata()
+
+    Handling duplicate dates:
+    - Some dates have 2 homilies (e.g., 1977-05-15)
+    - Files are named: 1_spanish.txt, 2_spanish.txt for duplicates
+    - We match by tracking which occurrence (1st, 2nd) for each date
+    - This relies on metadata JSON order matching file sequence numbers
     """
     cursor = conn.cursor()
 
     # Find all text files
-    text_files = list(Path('homilies').rglob('*.txt'))
+    text_files = sorted(Path('homilies').rglob('*.txt'))
     print(f"Found {len(text_files)} text files")
 
     spanish_count = 0
     english_count = 0
 
+    # Track which occurrence we're on for each date
+    date_occurrence = {}
+
     for text_path in text_files:
-        # Parse path: homilies/1977/03/14/spanish.txt
+        # Parse path: homilies/1977/03/14/spanish.txt or homilies/1977/05/15/2_spanish.txt
         parts = text_path.parts
         year = parts[-4]
         month = parts[-3]
         day = parts[-2]
-        language = text_path.stem  # 'spanish' or 'english'
+        filename = text_path.stem  # 'spanish', 'english', '1_spanish', '2_english', etc.
 
         # Construct date in ISO format (YYYY-MM-DD)
         date = f"{year}-{month}-{day}"
+
+        # Parse filename to get language and sequence number
+        if '_' in filename:
+            # Format: "2_spanish" or "1_english"
+            seq_str, language = filename.split('_', 1)
+            sequence = int(seq_str)
+        else:
+            # Format: "spanish" or "english" (no sequence, only homily on this date)
+            language = filename
+            sequence = 1
 
         # Read text file
         with open(text_path, 'r', encoding='utf-8') as f:
             text = f.read()
 
-        # Update the database row for this date
+        # Get all row IDs for this date (ordered by insertion order, which matches JSON order)
+        cursor.execute('''
+            SELECT id FROM homilies
+            WHERE date = ?
+            ORDER BY id
+        ''', (date,))
+        row_ids = [row[0] for row in cursor.fetchall()]
+
+        if not row_ids:
+            print(f"  WARNING: No database row found for date {date} (file: {text_path})")
+            continue
+
+        if sequence > len(row_ids):
+            print(f"  WARNING: File {text_path} has sequence {sequence} but only {len(row_ids)} rows for {date}")
+            continue
+
+        # Get the row_id for this specific sequence (1-indexed)
+        row_id = row_ids[sequence - 1]
+
+        # Update the specific database row by ID
         if language == 'spanish':
             cursor.execute('''
                 UPDATE homilies
                 SET spanish_text = ?,
                     spanish_pdf_path = ?
-                WHERE date = ?
-            ''', (text, str(text_path.with_suffix('.pdf')), date))
+                WHERE id = ?
+            ''', (text, str(text_path.with_suffix('.pdf')), row_id))
             spanish_count += 1
 
         elif language == 'english':
@@ -187,8 +225,8 @@ def load_text_files(conn):
                 UPDATE homilies
                 SET english_text = ?,
                     english_pdf_path = ?
-                WHERE date = ?
-            ''', (text, str(text_path.with_suffix('.pdf')), date))
+                WHERE id = ?
+            ''', (text, str(text_path.with_suffix('.pdf')), row_id))
             english_count += 1
 
     # Commit all text updates
