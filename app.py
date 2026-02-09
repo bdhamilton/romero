@@ -3,7 +3,7 @@
 Flask web app for Romero Ngram Viewer and homily browsing.
 """
 
-from flask import Flask, render_template, abort, request, jsonify
+from flask import Flask, render_template, abort, request, jsonify, redirect, url_for
 import sqlite3
 from pathlib import Path
 from search import search_corpus
@@ -42,17 +42,24 @@ def browse():
             biblical_references,
             spanish_pdf_url,
             english_pdf_url,
-            detail_url,
-            spanish_text IS NULL as missing_spanish,
-            english_text IS NULL as missing_english
+            detail_url
         FROM homilies
         ORDER BY date ASC
     ''')
-
     homilies = cursor.fetchall()
+
+    flags = cursor.execute('''
+        SELECT f.id, f.homily_id, f.comment, f.created_at,
+               h.date, h.spanish_title, h.english_title, h.occasion
+        FROM flags f
+        JOIN homilies h ON h.id = f.homily_id
+        WHERE f.status = 'open'
+        ORDER BY f.created_at DESC
+    ''').fetchall()
+
     conn.close()
 
-    return render_template('index.html', homilies=homilies)
+    return render_template('index.html', homilies=homilies, flags=flags)
 
 
 @app.route('/api/search')
@@ -88,6 +95,37 @@ def api_search():
         'months': months,
     })
 
+
+@app.route('/homily/<int:homily_id>/flag', methods=['GET', 'POST'])
+def flag_homily(homily_id):
+    """Flag a data issue on a homily."""
+    conn = get_db()
+
+    homily = conn.execute(
+        'SELECT * FROM homilies WHERE id = ?', (homily_id,)
+    ).fetchone()
+    if not homily:
+        conn.close()
+        abort(404)
+
+    if request.method == 'POST':
+        comment = request.form.get('comment', '').strip()
+        if comment:
+            conn.execute(
+                'INSERT INTO flags (homily_id, comment) VALUES (?, ?)',
+                (homily_id, comment)
+            )
+            conn.commit()
+        conn.close()
+        return redirect(url_for('flag_homily', homily_id=homily_id))
+
+    flags = conn.execute(
+        'SELECT * FROM flags WHERE homily_id = ? ORDER BY created_at DESC',
+        (homily_id,)
+    ).fetchall()
+
+    conn.close()
+    return render_template('flag.html', homily=homily, flags=flags)
 
 
 if __name__ == '__main__':

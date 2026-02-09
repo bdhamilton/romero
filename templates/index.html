@@ -108,7 +108,7 @@
             max-width: 200px;
         }
 
-        /* Data issues */
+        /* Data flags */
         .data-issues {
             margin-top: 24px;
             padding: 16px;
@@ -133,22 +133,25 @@
             color: #202124;
             font-weight: 600;
         }
-        .data-issues h4 {
-            font-size: 13px;
-            font-weight: 600;
-            color: #5f6368;
-            margin-top: 12px;
-            margin-bottom: 4px;
-        }
-        .data-issues h4:first-of-type {
-            margin-top: 8px;
-        }
         .data-issues a {
             color: #4285f4;
             text-decoration: none;
         }
         .data-issues a:hover {
             text-decoration: underline;
+        }
+
+        .col-flag {
+            width: 32px;
+            text-align: right;
+        }
+        .col-flag a {
+            color: #dadce0;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        .col-flag a:hover {
+            color: #4285f4;
         }
 
         .pdf-link {
@@ -186,28 +189,19 @@
             <p class="subtitle">{{ homilies|length }} homilies &middot; March 1977 – March 1980</p>
         </div>
 
-        {% set no_spanish = homilies | selectattr('missing_spanish') | list %}
-        {% set no_english = homilies | selectattr('missing_english') | list %}
-        {% if no_spanish or no_english %}
+        {% if flags %}
         <div class="data-issues">
             <details>
-                <summary>Known data issues ({{ no_spanish|length + no_english|length }} missing texts)</summary>
-                {% if no_spanish %}
-                <h4>No Spanish text ({{ no_spanish|length }}):</h4>
+                <summary>Open data flags ({{ flags|length }})</summary>
                 <ul>
-                    {% for h in no_spanish %}
-                    <li><span class="issue-date">{{ h['date'] }}</span> — <a href="{{ h['detail_url'] }}" target="_blank">{{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</a></li>
+                    {% for f in flags %}
+                    <li>
+                        <span class="issue-date">{{ f['date'] }}</span> —
+                        <a href="/homily/{{ f['homily_id'] }}/flag">{{ f['spanish_title'] or f['english_title'] or f['occasion'] }}</a>:
+                        {{ f['comment'] }}
+                    </li>
                     {% endfor %}
                 </ul>
-                {% endif %}
-                {% if no_english %}
-                <h4>No English text ({{ no_english|length }}):</h4>
-                <ul>
-                    {% for h in no_english %}
-                    <li><span class="issue-date">{{ h['date'] }}</span> — <a href="{{ h['detail_url'] }}" target="_blank">{{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</a></li>
-                    {% endfor %}
-                </ul>
-                {% endif %}
             </details>
         </div>
         {% endif %}
@@ -218,6 +212,7 @@
                     <th>Date</th>
                     <th>Title</th>
                     <th>Biblical References</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -245,6 +240,7 @@
                         {% endif %}
                     </td>
                     <td class="col-refs">{{ homily['biblical_references'] or '—' }}</td>
+                    <td class="col-flag"><a href="/homily/{{ homily['id'] }}/flag" title="Flag a data issue">flag</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
