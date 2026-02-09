@@ -108,20 +108,50 @@
             max-width: 200px;
         }
 
-        .col-pdf {
-            text-align: center;
-            width: 40px;
+        /* Data issues */
+        .data-issues {
+            margin-top: 24px;
+            padding: 16px;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            background: #f8f9fa;
+            font-size: 13px;
+            color: #5f6368;
         }
-        .col-pdf a {
+        .data-issues summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #3c4043;
+        }
+        .data-issues ul {
+            margin: 8px 0 0 20px;
+        }
+        .data-issues li {
+            padding: 2px 0;
+        }
+        .data-issues .issue-date {
+            color: #202124;
+            font-weight: 600;
+        }
+        .data-issues h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #5f6368;
+            margin-top: 12px;
+            margin-bottom: 4px;
+        }
+        .data-issues h4:first-of-type {
+            margin-top: 8px;
+        }
+
+        .pdf-link {
             color: #4285f4;
             text-decoration: none;
-            font-size: 13px;
+            font-size: 12px;
+            margin-left: 6px;
         }
-        .col-pdf a:hover {
+        .pdf-link:hover {
             text-decoration: underline;
-        }
-        .col-pdf .missing {
-            color: #dadce0;
         }
 
         /* Footer */
@@ -149,14 +179,38 @@
             <p class="subtitle">{{ homilies|length }} homilies &middot; March 1977 – March 1980</p>
         </div>
 
+        {% set no_spanish = homilies | selectattr('missing_spanish') | list %}
+        {% set no_english = homilies | selectattr('missing_english') | list %}
+        {% if no_spanish or no_english %}
+        <div class="data-issues">
+            <details>
+                <summary>Known data issues ({{ no_spanish|length + no_english|length }} missing texts)</summary>
+                {% if no_spanish %}
+                <h4>No Spanish text ({{ no_spanish|length }}):</h4>
+                <ul>
+                    {% for h in no_spanish %}
+                    <li><span class="issue-date">{{ h['date'] }}</span> — {{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if no_english %}
+                <h4>No English text ({{ no_english|length }}):</h4>
+                <ul>
+                    {% for h in no_english %}
+                    <li><span class="issue-date">{{ h['date'] }}</span> — {{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </details>
+        </div>
+        {% endif %}
+
         <table>
             <thead>
                 <tr>
                     <th>Date</th>
                     <th>Title</th>
                     <th>Biblical References</th>
-                    <th>ES</th>
-                    <th>EN</th>
                 </tr>
             </thead>
             <tbody>
@@ -169,32 +223,21 @@
                     <td class="col-title">
                         {% if homily['spanish_title'] or homily['english_title'] %}
                         <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['spanish_title'] or homily['english_title'] }}</a>
+                        {% if homily['spanish_pdf_url'] %}
+                        <a href="{{ homily['spanish_pdf_url'] }}" target="_blank" class="pdf-link">(PDF)</a>
+                        {% endif %}
                         {% if homily['spanish_title'] and homily['english_title'] %}
-                        <span class="english-subtitle">{{ homily['english_title'] }}</span>
+                        <span class="english-subtitle">{{ homily['english_title'] }}
+                            {% if homily['english_pdf_url'] %}
+                            <a href="{{ homily['english_pdf_url'] }}" target="_blank" class="pdf-link">(PDF)</a>
+                            {% endif %}
+                        </span>
                         {% endif %}
                         {% else %}
                         —
                         {% endif %}
                     </td>
                     <td class="col-refs">{{ homily['biblical_references'] or '—' }}</td>
-                    <td class="col-pdf">
-                        {% if homily['has_spanish'] and homily['spanish_pdf_path'] %}
-                        <a href="{{ url_for('serve_pdf', pdf_path=homily['spanish_pdf_path']) }}" target="_blank">PDF</a>
-                        {% elif homily['has_spanish'] %}
-                        <span class="missing">—</span>
-                        {% else %}
-                        <span class="missing">—</span>
-                        {% endif %}
-                    </td>
-                    <td class="col-pdf">
-                        {% if homily['has_english'] and homily['english_pdf_path'] %}
-                        <a href="{{ url_for('serve_pdf', pdf_path=homily['english_pdf_path']) }}" target="_blank">PDF</a>
-                        {% elif homily['has_english'] %}
-                        <span class="missing">—</span>
-                        {% else %}
-                        <span class="missing">—</span>
-                        {% endif %}
-                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

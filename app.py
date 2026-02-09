@@ -3,7 +3,7 @@
 Flask web app for Romero Ngram Viewer and homily browsing.
 """
 
-from flask import Flask, render_template, send_file, abort, request, jsonify
+from flask import Flask, render_template, abort, request, jsonify
 import sqlite3
 from pathlib import Path
 from search import search_corpus
@@ -40,11 +40,11 @@ def browse():
             english_title,
             spanish_title,
             biblical_references,
-            spanish_text IS NOT NULL as has_spanish,
-            english_text IS NOT NULL as has_english,
-            spanish_pdf_path,
-            english_pdf_path,
-            detail_url
+            spanish_pdf_url,
+            english_pdf_url,
+            detail_url,
+            spanish_text IS NULL as missing_spanish,
+            english_text IS NULL as missing_english
         FROM homilies
         ORDER BY date ASC
     ''')
@@ -88,21 +88,6 @@ def api_search():
         'months': months,
     })
 
-
-@app.route('/pdf/<path:pdf_path>')
-def serve_pdf(pdf_path):
-    """Serve a PDF file. Path already includes 'homilies/' prefix."""
-    file_path = Path(pdf_path)
-
-    # Security: ensure the path doesn't escape directories
-    if '..' in str(file_path) or file_path.is_absolute():
-        abort(404)
-
-    # Path from database already includes "homilies/" prefix
-    if not file_path.exists() or not file_path.is_file():
-        abort(404)
-
-    return send_file(file_path, mimetype='application/pdf')
 
 
 if __name__ == '__main__':
