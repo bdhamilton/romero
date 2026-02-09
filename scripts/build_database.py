@@ -23,7 +23,14 @@ Time estimate:
 import subprocess
 import sys
 from pathlib import Path
+from datetime import datetime
+import shutil
 import time
+
+# Ensure we run from the project root regardless of where the script lives
+PROJECT_ROOT = Path(__file__).resolve().parent
+if PROJECT_ROOT.name == 'scripts':
+    PROJECT_ROOT = PROJECT_ROOT.parent
 
 
 def run_script(script_path, description, auto_yes=False):
@@ -109,26 +116,26 @@ def main():
     steps = []
 
     if not skip_scrape:
-        steps.append(('scripts/01_scrape_all_metadata.py', 'Scrape metadata from Romero Trust', False))
+        steps.append((str(PROJECT_ROOT / 'scripts/01_scrape_all_metadata.py'), 'Scrape metadata from Romero Trust', False))
     else:
         print("\n⏭  Skipping metadata scraping (using existing data)")
-        if not Path('archive/homilies_metadata.json').exists():
+        if not (PROJECT_ROOT / 'archive/homilies_metadata.json').exists():
             print("❌ ERROR: archive/homilies_metadata.json not found")
             print("   Cannot skip scraping without existing metadata file")
             sys.exit(1)
 
     if not skip_download:
-        steps.append(('scripts/02_download_pdfs.py', 'Download all PDFs into date hierarchy (~12 min)', True))
+        steps.append((str(PROJECT_ROOT / 'scripts/02_download_pdfs.py'), 'Download all PDFs into date hierarchy (~12 min)', True))
     else:
         print("\n⏭  Skipping PDF downloads (using existing PDFs)")
-        if not Path('homilies').exists():
+        if not (PROJECT_ROOT / 'homilies').exists():
             print("❌ ERROR: homilies/ directory not found")
             print("   Cannot skip downloads without existing PDFs")
             sys.exit(1)
 
     # These steps always run
-    steps.append(('scripts/03_extract_text.py', 'Extract text from all PDFs', True))
-    steps.append(('scripts/04_create_database.py', 'Create SQLite database and load data', False))
+    steps.append((str(PROJECT_ROOT / 'scripts/03_extract_text.py'), 'Extract text from all PDFs', True))
+    steps.append((str(PROJECT_ROOT / 'scripts/04_create_database.py'), 'Create SQLite database and load data', False))
 
     # Summary
     print(f"\nPipeline: {len(steps)} steps to execute")
@@ -141,6 +148,14 @@ def main():
         if response.lower() != 'y':
             print("Cancelled")
             sys.exit(0)
+
+    # Backup existing database before doing anything destructive
+    db_path = PROJECT_ROOT / 'romero.db'
+    if db_path.exists():
+        timestamp = datetime.now().strftime('%Y-%m-%dT%H%M')
+        backup_path = PROJECT_ROOT / f'romero.db.backup.{timestamp}'
+        shutil.copy2(db_path, backup_path)
+        print(f"\n✓ Backed up existing database to {backup_path.name}")
 
     # Execute pipeline
     for i, (script, description, auto_yes) in enumerate(steps, 1):
@@ -169,7 +184,7 @@ def main():
     # Show database stats
     try:
         import sqlite3
-        conn = sqlite3.connect('romero.db')
+        conn = sqlite3.connect(str(PROJECT_ROOT / 'romero.db'))
         cursor = conn.cursor()
 
         cursor.execute('SELECT COUNT(*) FROM homilies')
@@ -190,7 +205,7 @@ def main():
         min_date, max_date = cursor.fetchone()
         print(f"  Date range: {min_date} to {max_date}")
 
-        db_size = Path('romero.db').stat().st_size / 1024 / 1024
+        db_size = (PROJECT_ROOT / 'romero.db').stat().st_size / 1024 / 1024
         print(f"  File size: {db_size:.2f} MB")
 
         conn.close()

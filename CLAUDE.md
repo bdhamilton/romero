@@ -55,9 +55,9 @@ romero/
 ├── app.py                       # Flask web app (ngram viewer + browse + API)
 ├── search.py                    # Search module (accent folding, tokenization, monthly aggregation)
 ├── ngram.py                     # CLI search tool (terminal frequency charts)
-├── build_database.py            # Master pipeline: runs all 4 scripts (will move to scripts/)
 ├── requirements.txt             # Python deps: requests, bs4, pdfplumber, flask
 ├── scripts/
+│   ├── build_database.py           # Master pipeline (historical — backs up DB before rebuild)
 │   ├── 01_scrape_all_metadata.py   # Scrape Romero Trust website
 │   ├── 02_download_pdfs.py         # Download PDFs (rate-limited)
 │   ├── 03_extract_text.py          # Extract text with pdfplumber
@@ -176,8 +176,6 @@ All data collected from the Romero Trust website and stored locally. No further 
 **Remaining:**
 1. Add `status` column to `homilies` table (default `'active'`). Values: `'active'`, `'not_a_homily'`, `'placeholder'`. Filter on `status = 'active'` in search module and ngram viewer. Browse page shows all rows but marks non-active ones visually.
 2. `changelog` table + CLI edit tool for making corrections with audit trail
-3. Move `build_database.py` into `scripts/` with backup-before-overwrite behavior
-4. Update search module to filter on `status = 'active'`
 
 ### Phase 2: Enhancements
 
@@ -232,8 +230,8 @@ Each development session follows this pattern:
 
 **Running the project:**
 ```bash
-# First time: build database from scratch
-python build_database.py --skip-scrape --skip-download  # if PDFs already downloaded
+# Rebuild database from scratch (backs up existing DB first)
+python scripts/build_database.py --skip-scrape --skip-download  # if PDFs already downloaded
 
 # Run web app
 python app.py  # http://localhost:5000 (ngram viewer), /browse (homily table)

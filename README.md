@@ -29,10 +29,10 @@ python ngram.py "pueblo de dios" --norm words  # per 10k words
 python ngram.py justicia --norm homilies       # per homily
 ```
 
-To rebuild the database from scratch (downloads from Romero Trust, ~20 minutes):
+To rebuild the database from scratch (downloads from Romero Trust, ~20 minutes). This backs up the existing database first:
 
 ```bash
-python build_database.py
+python scripts/build_database.py
 ```
 
 ## Data Source
