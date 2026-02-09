@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Romero Ngram Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #222;
+        }
+
+        .page {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .header {
+            padding: 40px 0 8px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: normal;
+            color: #222;
+        }
+        .header h1 span {
+            color: #5f6368;
+            font-size: 16px;
+            font-weight: normal;
+            margin-left: 4px;
+        }
+        .subtitle {
+            color: #5f6368;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Search */
+        .search-row {
+            display: flex;
+            margin-top: 20px;
+            gap: 0;
+        }
+        .search-row input {
+            flex: 1;
+            font-size: 16px;
+            padding: 10px 16px;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px 0 0 24px;
+            outline: none;
+        }
+        .search-row input:focus {
+            border-color: #4285f4;
+            box-shadow: 0 0 0 1px #4285f4;
+        }
+        .search-row button {
+            font-size: 14px;
+            padding: 10px 24px;
+            background: #4285f4;
+            color: #fff;
+            border: 1px solid #4285f4;
+            border-radius: 0 24px 24px 0;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .search-row button:hover {
+            background: #3367d6;
+            border-color: #3367d6;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #5f6368;
+        }
+        .controls select {
+            font-size: 13px;
+            padding: 4px 8px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            color: #3c4043;
+            background: #fff;
+        }
+        .controls label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        /* Examples */
+        .examples {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #5f6368;
+        }
+        .examples a {
+            color: #4285f4;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .examples a:hover {
+            text-decoration: underline;
+        }
+
+        /* Status (transient messages above chart) */
+        .status {
+            margin-top: 16px;
+            font-size: 13px;
+            color: #5f6368;
+        }
+        .status:empty {
+            display: none;
+        }
+
+        /* Chart */
+        .chart-container {
+            margin-top: 16px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 16px 16px 8px;
+            background: #fff;
+        }
+        .chart-info {
+            font-size: 13px;
+            color: #9aa0a6;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e8eaed;
+            text-align: center;
+        }
+
+        /* Drilldown */
+        .drilldown {
+            margin-top: 16px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 16px;
+            background: #f8f9fa;
+        }
+        .drilldown h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #202124;
+            margin-bottom: 12px;
+        }
+        .drilldown-list {
+            list-style: none;
+        }
+        .drilldown-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e8eaed;
+            font-size: 14px;
+            display: flex;
+            gap: 12px;
+        }
+        .drilldown-list li:last-child {
+            border-bottom: none;
+        }
+        .drilldown-count {
+            color: #4285f4;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: right;
+        }
+        .drilldown-date {
+            color: #5f6368;
+            min-width: 130px;
+            white-space: nowrap;
+        }
+        .drilldown-title a {
+            color: #202124;
+            text-decoration: none;
+        }
+        .drilldown-title a:hover {
+            color: #4285f4;
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 48px;
+            padding: 24px 0;
+            border-top: 1px solid #e8eaed;
+            font-size: 13px;
+            color: #5f6368;
+            text-align: center;
+        }
+        .footer a {
+            color: #4285f4;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <h1>Romero Ngram Viewer</h1>
+            <p class="subtitle">Word frequency in Archbishop Romero's homilies, 1977–1980</p>
+        </div>
+
+        <form id="search-form">
+            <div class="search-row">
+                <input type="text" id="term" name="term"
+                       placeholder="Enter a word or phrase in Spanish..."
+                       autocomplete="off" autofocus>
+                <button type="submit">Search</button>
+            </div>
+        </form>
+
+        <div class="examples" id="examples">
+            Try:
+            <a data-term="pueblo">pueblo</a>,
+            <a data-term="violencia">violencia</a>,
+            <a data-term="justicia">justicia</a>,
+            <a data-term="esperanza">esperanza</a>,
+            <a data-term="pueblo de dios">pueblo de dios</a>,
+            <a data-term="iglesia">iglesia</a>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="chart-container" id="chart-container" style="display:none">
+            <canvas id="chart"></canvas>
+            <div class="chart-info" id="chart-info"></div>
+            <div class="controls">
+                <label for="norm">Y-axis:</label>
+                <select id="norm">
+                    <option value="count" selected>Raw count</option>
+                    <option value="per_10k_words">Per 10,000 words</option>
+                    <option value="per_homily">Per homily</option>
+                </select>
+                <label title="Smoothing averages adjacent months to reveal trends">
+                    Smoothing:
+                    <select id="smoothing">
+                        <option value="0" selected>0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div class="drilldown" id="drilldown" style="display:none"></div>
+
+        <div class="footer">
+            <p>Data sourced from <a href="https://www.romerotrust.org.uk" target="_blank">The Romero Trust</a>
+            &middot; <a href="/browse">Browse all homilies</a></p>
+        </div>
+    </div>
+
+<script>
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function formatMonth(ym) {
+    const [y, m] = ym.split('-');
+    return MONTH_NAMES[parseInt(m) - 1] + ' ' + y;
+}
+
+function smooth(values, window) {
+    if (window === 0) return values;
+    return values.map((_, i, arr) => {
+        let sum = 0, n = 0;
+        for (let j = i - window; j <= i + window; j++) {
+            if (j >= 0 && j < arr.length) { sum += arr[j]; n++; }
+        }
+        return sum / n;
+    });
+}
+
+let chartInstance = null;
+let lastResult = null;
+
+function getValues(data, metric) {
+    return data.months.map(m => {
+        if (metric === 'per_10k_words') return m.per_10k_words;
+        if (metric === 'per_homily') return m.per_homily;
+        return m.count;
+    });
+}
+
+function metricLabel(metric) {
+    if (metric === 'per_10k_words') return 'per 10,000 words';
+    if (metric === 'per_homily') return 'per homily';
+    return 'occurrences';
+}
+
+function renderChart(data) {
+    const container = document.getElementById('chart-container');
+    const info = document.getElementById('chart-info');
+    const drilldown = document.getElementById('drilldown');
+    const metric = document.getElementById('norm').value;
+    const smoothing = parseInt(document.getElementById('smoothing').value);
+
+    const labels = data.months.map(m => formatMonth(m.month));
+    const raw = getValues(data, metric);
+    const values = smooth(raw, smoothing);
+
+    info.textContent = `"${data.term}" — ${data.total_count.toLocaleString()} occurrences in ${data.total_homilies} homilies`;
+
+    if (chartInstance) chartInstance.destroy();
+
+    container.style.display = 'block';
+    drilldown.style.display = 'none';
+
+    chartInstance = new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: data.term,
+                data: values,
+                borderColor: '#4285f4',
+                backgroundColor: 'rgba(66, 133, 244, 0.08)',
+                fill: true,
+                tension: 0.25,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#4285f4',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1.5,
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2.2,
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#fff',
+                    titleColor: '#202124',
+                    bodyColor: '#5f6368',
+                    borderColor: '#dadce0',
+                    borderWidth: 1,
+                    cornerRadius: 8,
+                    padding: 10,
+                    displayColors: false,
+                    callbacks: {
+                        title: function(items) {
+                            return items[0].label;
+                        },
+                        label: function(item) {
+                            const m = data.months[item.dataIndex];
+                            const val = item.parsed.y;
+                            const label = metricLabel(metric);
+                            let s = Number.isInteger(val) ? val.toLocaleString() : val.toFixed(1);
+                            let line = s + ' ' + label;
+                            if (metric !== 'count') {
+                                line += ' (' + m.count + ' total)';
+                            }
+                            return line;
+                        },
+                        afterLabel: function(item) {
+                            const m = data.months[item.dataIndex];
+                            return m.num_homilies + ' homilies this month';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: '#f1f3f4' },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#5f6368',
+                        maxRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 18,
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f1f3f4' },
+                    ticks: {
+                        font: { size: 11 },
+                        color: '#5f6368',
+                    },
+                    title: {
+                        display: true,
+                        text: metricLabel(metric),
+                        color: '#5f6368',
+                        font: { size: 12 },
+                    }
+                }
+            },
+            onClick: function(evt, elements) {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    showDrilldown(data, idx);
+                }
+            }
+        }
+    });
+}
+
+function formatDate(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    const date = new Date(y, parseInt(m) - 1, parseInt(d));
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function showDrilldown(data, monthIndex) {
+    const m = data.months[monthIndex];
+    const el = document.getElementById('drilldown');
+
+    if (m.count === 0) {
+        el.style.display = 'none';
+        return;
+    }
+
+    const homilies = m.homilies.slice().sort((a, b) => b.count - a.count);
+    const monthLabel = formatMonth(m.month);
+
+    let html = `<h3>${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
+    html += '<ul class="drilldown-list">';
+    for (const h of homilies) {
+        const title = h.detail_url
+            ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
+            : h.title;
+        html += `<li>
+            <span class="drilldown-count">${h.count}x</span>
+            <span class="drilldown-date">${formatDate(h.date)}</span>
+            <span class="drilldown-title">${title}</span>
+        </li>`;
+    }
+    html += '</ul>';
+
+    el.innerHTML = html;
+    el.style.display = 'block';
+}
+
+async function doSearch(term) {
+    const status = document.getElementById('status');
+    const container = document.getElementById('chart-container');
+    const drilldown = document.getElementById('drilldown');
+
+    status.textContent = 'Searching...';
+    container.style.display = 'none';
+    drilldown.style.display = 'none';
+
+    try {
+        const resp = await fetch('/api/search?term=' + encodeURIComponent(term));
+        const data = await resp.json();
+
+        if (data.error) {
+            status.textContent = data.error;
+            return;
+        }
+
+        if (data.total_count === 0) {
+            status.textContent = `No results for "${term}"`;
+            return;
+        }
+
+        status.textContent = '';
+        lastResult = data;
+        renderChart(data);
+
+        // Update URL
+        const url = new URL(window.location);
+        url.searchParams.set('term', term);
+        history.replaceState(null, '', url);
+
+    } catch (e) {
+        status.textContent = 'Search failed: ' + e.message;
+    }
+}
+
+// Search form
+document.getElementById('search-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const term = document.getElementById('term').value.trim();
+    if (term) doSearch(term);
+});
+
+// Example links
+document.getElementById('examples').addEventListener('click', function(e) {
+    if (e.target.dataset.term) {
+        e.preventDefault();
+        document.getElementById('term').value = e.target.dataset.term;
+        doSearch(e.target.dataset.term);
+    }
+});
+
+// Re-render on control change
+document.getElementById('norm').addEventListener('change', function() {
+    if (lastResult) renderChart(lastResult);
+});
+document.getElementById('smoothing').addEventListener('change', function() {
+    if (lastResult) renderChart(lastResult);
+});
+
+// Auto-search from URL
+const params = new URLSearchParams(window.location.search);
+if (params.get('term')) {
+    document.getElementById('term').value = params.get('term');
+    doSearch(params.get('term'));
+}
+</script>
+</body>
+</html>

@@ -25,27 +25,34 @@ This is a research tool and proof-of-concept for theological and philosophical r
 ## Current Status
 
 **Phase:** 1 (MVP - Spanish Ngram Viewer)
-**Current State:** Phase 0 complete. Database populated, Flask browse interface working. Ngram search and visualization not yet built.
+**Current State:** Core search and visualization working. Ngram viewer is the main page.
 
 **What exists:**
 - ✓ All 195 homilies scraped, 371 PDFs downloaded, 374 text files extracted
 - ✓ SQLite database (`romero.db`) with all data: 186 Spanish texts, 188 English texts
-- ✓ Flask web app (`app.py`) for browsing homilies at `http://localhost:5000`
 - ✓ Full data pipeline (`build_database.py`) that can rebuild everything from scratch
+- ✓ Search module (`search.py`) — case/accent-insensitive, phrase matching, monthly aggregation
+- ✓ CLI search tool (`ngram.py`) — terminal-based frequency charts
+- ✓ Web ngram viewer (`/`) — Google Ngram-style UI with Chart.js line chart
+- ✓ Homily browser (`/browse`) — table of all homilies with PDF links
+- ✓ Search API (`/api/search`) — JSON endpoint for ngram queries
+- ✓ Three normalization modes: raw count, per 10K words, per homily
+- ✓ Smoothing (0-3 month moving average)
+- ✓ Drill-down: click data point → see matching homilies with links to Romero Trust
 
-**Next steps (Phase 1):**
-1. Build corpus index (word/phrase → date/homily/count/context mappings)
-2. Implement search (case-insensitive, accent-insensitive, phrase matching)
-3. Add time-series visualization (Chart.js line chart, monthly resolution)
-4. Drill-down: click data point → see matching homilies with context
-5. Deploy as public web app
+**Next steps:**
+1. Deploy as public web app
+2. Context snippets in drill-down (show surrounding text for each match)
+3. Multi-term comparison (plot multiple words on same chart)
 
 ## Project Structure
 
 ```
 romero/
 ├── romero.db                    # SQLite database (13 MB, all data)
-├── app.py                       # Flask web app (browse interface)
+├── app.py                       # Flask web app (ngram viewer + browse + API)
+├── search.py                    # Search module (accent folding, tokenization, monthly aggregation)
+├── ngram.py                     # CLI search tool (terminal frequency charts)
 ├── build_database.py            # Master pipeline: runs all 4 scripts
 ├── requirements.txt             # Python deps: requests, bs4, pdfplumber, flask
 ├── scripts/
@@ -63,7 +70,8 @@ romero/
 │   └── PHASE0_NOTES.md          # Detailed extraction documentation
 ├── templates/                   # Flask templates
 │   ├── base.html
-│   └── index.html
+│   ├── index.html               # Homily browse table (/browse)
+│   └── ngram.html               # Ngram viewer (/)
 └── static/css/style.css
 ```
 
@@ -115,36 +123,31 @@ All data collected from the Romero Trust website and stored locally. No further 
 - Regex order matters in text cleaning: fix hyphens before adding spaces at newlines
 - Inline footnote markers (bare digits) are acceptable noise — too hard to distinguish from real numbers
 
-### Phase 1: MVP - Spanish Ngram Viewer (CURRENT)
+### Phase 1: MVP - Spanish Ngram Viewer (CURRENT — mostly complete)
 
 **Goal:** Build a working Ngram viewer for Spanish text only.
 
-**Tasks:**
-1. Build corpus index
-   - Word/phrase → [date, homily_id, occurrence_count, context] mappings
-   - Efficient querying for time-series data
-2. Implement search
-   - Case-insensitive by default
-   - Accent-insensitive by default (configurable)
-   - Exact phrase matching
-   - Aggregate by month for visualization
-3. Create command-line query tool for testing
-4. Build minimal web interface
-   - Input box for word/phrase search
-   - Line chart showing frequency over time (monthly resolution)
-   - Click data point → see list of matching homilies with context
-5. Deploy as public web app
+**Completed:**
+1. ✓ Search module — no pre-built index needed; scanning 186 texts (~6 MB) takes ~0.6s
+2. ✓ Case-insensitive, accent-insensitive (via NFD decomposition), exact phrase matching
+3. ✓ CLI tool (`ngram.py`) with ASCII bar charts and top-homily listings
+4. ✓ Web interface — Google Ngram Viewer-inspired design with Chart.js
+5. ✓ Drill-down: click chart data point → see matching homilies with links to Romero Trust
 
-**Technology Stack (decided):**
+**Remaining:**
+- Deploy as public web app
+
+**Technology Stack:**
 - Backend: Python + Flask
 - Database: SQLite (sufficient for corpus size)
-- Frontend: HTML/JS with Chart.js (or similar charting library)
+- Frontend: HTML/JS with Chart.js (loaded from CDN)
 - No heavy frameworks — prioritize simplicity
 
-**Decisions Deferred Until We See Data:**
-- Y-axis metric: Raw count vs. normalized frequency (per 10,000 words)?
-- Smoothing/averaging options?
-- How to handle months with no homilies?
+**Key decisions made:**
+- No pre-built ngram index — brute-force tokenize+scan is fast enough at this corpus size
+- Y-axis: three modes available (raw count, per 10K words, per homily). Default is raw count.
+- Smoothing: 0-3 month moving average, user-selectable
+- All 37 months have at least 1 homily, so no gap-handling needed
 
 ### Phase 2: Enhancements
 
@@ -203,7 +206,12 @@ Each development session follows this pattern:
 python build_database.py --skip-scrape --skip-download  # if PDFs already downloaded
 
 # Run web app
-python app.py  # opens at http://localhost:5000
+python app.py  # http://localhost:5000 (ngram viewer), /browse (homily table)
+
+# CLI search
+python ngram.py pueblo                    # raw count (default)
+python ngram.py "pueblo de dios" --norm words   # per 10k words
+python ngram.py justicia --norm homilies  # per homily
 ```
 
 **Date Context:**
