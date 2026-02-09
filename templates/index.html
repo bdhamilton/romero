@@ -143,6 +143,13 @@
         .data-issues h4:first-of-type {
             margin-top: 8px;
         }
+        .data-issues a {
+            color: #4285f4;
+            text-decoration: none;
+        }
+        .data-issues a:hover {
+            text-decoration: underline;
+        }
 
         .pdf-link {
             color: #4285f4;
@@ -189,7 +196,7 @@
                 <h4>No Spanish text ({{ no_spanish|length }}):</h4>
                 <ul>
                     {% for h in no_spanish %}
-                    <li><span class="issue-date">{{ h['date'] }}</span> — {{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</li>
+                    <li><span class="issue-date">{{ h['date'] }}</span> — <a href="{{ h['detail_url'] }}" target="_blank">{{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</a></li>
                     {% endfor %}
                 </ul>
                 {% endif %}
@@ -197,7 +204,7 @@
                 <h4>No English text ({{ no_english|length }}):</h4>
                 <ul>
                     {% for h in no_english %}
-                    <li><span class="issue-date">{{ h['date'] }}</span> — {{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</li>
+                    <li><span class="issue-date">{{ h['date'] }}</span> — <a href="{{ h['detail_url'] }}" target="_blank">{{ h['spanish_title'] or h['english_title'] or h['occasion'] }}</a></li>
                     {% endfor %}
                 </ul>
                 {% endif %}
