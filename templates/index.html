@@ -1,64 +1,209 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Homilies - Romero Ngram Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-{% block title %}Homilies Index - Romero Archive{% endblock %}
+        body {
+            font-family: Arial, sans-serif;
+            background: #fff;
+            color: #222;
+        }
 
-{% block content %}
-<div class="homilies-table">
-    <div class="header">
-        <h2>Complete Index</h2>
-        <p>{{ homilies|length }} homilies • March 1977 - March 1980</p>
+        .page {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        .header {
+            padding: 40px 0 8px;
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: normal;
+            color: #222;
+        }
+        .header h1 a {
+            color: #222;
+            text-decoration: none;
+        }
+        .header h1 a:hover {
+            color: #4285f4;
+        }
+        .subtitle {
+            color: #5f6368;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 24px;
+            font-size: 14px;
+        }
+
+        thead th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #5f6368;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            border-bottom: 2px solid #e8eaed;
+        }
+
+        tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f1f3f4;
+            vertical-align: top;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Columns */
+        .col-date {
+            width: 90px;
+        }
+        .date {
+            font-weight: 600;
+            color: #202124;
+        }
+        .occasion {
+            color: #9aa0a6;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .col-title {
+            width: 100%;
+        }
+        .col-title a {
+            color: #202124;
+            text-decoration: none;
+        }
+        .col-title a:hover {
+            color: #4285f4;
+            text-decoration: underline;
+        }
+        .english-subtitle {
+            color: #9aa0a6;
+            font-size: 13px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .col-refs {
+            color: #5f6368;
+            font-size: 13px;
+            max-width: 200px;
+        }
+
+        .col-pdf {
+            text-align: center;
+            width: 40px;
+        }
+        .col-pdf a {
+            color: #4285f4;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .col-pdf a:hover {
+            text-decoration: underline;
+        }
+        .col-pdf .missing {
+            color: #dadce0;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 48px;
+            padding: 24px 0;
+            border-top: 1px solid #e8eaed;
+            font-size: 13px;
+            color: #5f6368;
+            text-align: center;
+        }
+        .footer a {
+            color: #4285f4;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="header">
+            <h1><a href="/">Romero Ngram Viewer</a></h1>
+            <p class="subtitle">{{ homilies|length }} homilies &middot; March 1977 – March 1980</p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Biblical References</th>
+                    <th>ES</th>
+                    <th>EN</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for homily in homilies %}
+                <tr>
+                    <td class="col-date">
+                        <div class="date">{{ homily['date'] }}</div>
+                        <div class="occasion">{{ homily['occasion'] or '' }}</div>
+                    </td>
+                    <td class="col-title">
+                        {% if homily['spanish_title'] or homily['english_title'] %}
+                        <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['spanish_title'] or homily['english_title'] }}</a>
+                        {% if homily['spanish_title'] and homily['english_title'] %}
+                        <span class="english-subtitle">{{ homily['english_title'] }}</span>
+                        {% endif %}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td class="col-refs">{{ homily['biblical_references'] or '—' }}</td>
+                    <td class="col-pdf">
+                        {% if homily['has_spanish'] and homily['spanish_pdf_path'] %}
+                        <a href="{{ url_for('serve_pdf', pdf_path=homily['spanish_pdf_path']) }}" target="_blank">PDF</a>
+                        {% elif homily['has_spanish'] %}
+                        <span class="missing">—</span>
+                        {% else %}
+                        <span class="missing">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="col-pdf">
+                        {% if homily['has_english'] and homily['english_pdf_path'] %}
+                        <a href="{{ url_for('serve_pdf', pdf_path=homily['english_pdf_path']) }}" target="_blank">PDF</a>
+                        {% elif homily['has_english'] %}
+                        <span class="missing">—</span>
+                        {% else %}
+                        <span class="missing">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <p>Data sourced from <a href="https://www.romerotrust.org.uk" target="_blank">The Romero Trust</a>
+            &middot; <a href="/">Ngram Viewer</a></p>
+        </div>
     </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Date / Occasion</th>
-                <th>Title</th>
-                <th>Biblical References</th>
-                <th>ES</th>
-                <th>EN</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for homily in homilies %}
-            <tr>
-                <td class="date-occasion">
-                    <div class="date">{{ homily['date'] }}</div>
-                    <div class="occasion">{{ homily['occasion'] or '—' }}</div>
-                </td>
-                <td class="title">
-                    {% if homily['spanish_title'] and homily['english_title'] %}
-                    <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['spanish_title'] }}</a> <span class="english-subtitle">({{ homily['english_title'] }})</span>
-                    {% elif homily['spanish_title'] %}
-                    <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['spanish_title'] }}</a>
-                    {% elif homily['english_title'] %}
-                    <a href="{{ homily['detail_url'] }}" target="_blank">{{ homily['english_title'] }}</a>
-                    {% else %}
-                    —
-                    {% endif %}
-                </td>
-                <td class="biblical-refs">{{ homily['biblical_references'] or '—' }}</td>
-                <td class="status">
-                    {% if homily['has_spanish'] and homily['spanish_pdf_path'] %}
-                    <a href="{{ url_for('serve_pdf', pdf_path=homily['spanish_pdf_path']) }}" target="_blank" class="check">✓</a>
-                    {% elif homily['has_spanish'] %}
-                    <span class="check">✓</span>
-                    {% else %}
-                    <span class="missing">✗</span>
-                    {% endif %}
-                </td>
-                <td class="status">
-                    {% if homily['has_english'] and homily['english_pdf_path'] %}
-                    <a href="{{ url_for('serve_pdf', pdf_path=homily['english_pdf_path']) }}" target="_blank" class="check">✓</a>
-                    {% elif homily['has_english'] %}
-                    <span class="check">✓</span>
-                    {% else %}
-                    <span class="missing">✗</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
+</body>
+</html>
