@@ -6,9 +6,12 @@
       "Bash(./venv/bin/python3:*)",
       "WebSearch",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nAdd Phase 0 implementation plan and database schema\n\nDocument workflow, SQLite schema design, and key decisions for data collection phase:\n- Flat schema (1 English + 1 Spanish PDF per homily)\n- Text stored in database for context display\n- Biblical references stored as raw strings\n- Discovered website structure from Romero Trust site\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git commit:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(sqlite3:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
