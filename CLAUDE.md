@@ -34,7 +34,7 @@ This is a research tool and proof-of-concept for theological and philosophical r
 - ✓ Search module (`search.py`) — case/accent-insensitive, phrase matching, monthly aggregation
 - ✓ CLI search tool (`ngram.py`) — terminal-based frequency charts
 - ✓ Web ngram viewer (`/`) — Google Ngram-style UI with Chart.js line chart
-- ✓ Homily browser (`/browse`) — table of all homilies with PDF links
+- ✓ Homily browser (`/browse`) — table of all homilies with PDF links to Romero Trust, known data issues section
 - ✓ Search API (`/api/search`) — JSON endpoint for ngram queries
 - ✓ Three normalization modes: raw count, per 10K words, per homily
 - ✓ Smoothing (0-3 month moving average)
@@ -97,6 +97,7 @@ CREATE INDEX idx_date ON homilies(date);
 ```
 
 - 195 rows, date range: 1977-03-14 to 1980-03-24
+- 186 with Spanish text, 188 with English text (9 missing Spanish, 7 missing English)
 - Flat structure (one row per homily) — always exactly 1 English + 1 Spanish PDF per homily
 
 ## Development Phases

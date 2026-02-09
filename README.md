@@ -19,7 +19,7 @@ python app.py
 # Open http://localhost:5000
 ```
 
-The ngram viewer is the main page. Browse all homilies at `/browse`.
+The ngram viewer is the main page. Browse all homilies at `/browse` (includes known data issues and links to PDFs on the Romero Trust site).
 
 There's also a CLI tool for terminal use:
 
@@ -41,6 +41,6 @@ All homilies sourced from [The Romero Trust](https://www.romerotrust.org.uk/homi
 
 **Coverage:**
 - **195 homilies** from March 14, 1977 (his first homily as Archbishop) to March 24, 1980 (day of assassination)
-- **Spanish originals** (185 available, ~95%)
-- **English translations** (189 available, ~97%)
+- **Spanish text** extracted for 186 homilies (9 missing — mostly audio-only or special events)
+- **English text** extracted for 188 homilies (7 missing)
 - **Audio recordings** for 172 homilies (~88%)
