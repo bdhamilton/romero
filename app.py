@@ -48,16 +48,30 @@ def browse():
     ''')
     homilies = cursor.fetchall()
 
-    flags = cursor.execute('''
-        SELECT f.id, f.homily_id, f.comment, f.created_at,
+    flag_rows = cursor.execute('''
+        SELECT f.homily_id, f.comment,
                h.date, h.spanish_title, h.english_title, h.occasion
         FROM flags f
         JOIN homilies h ON h.id = f.homily_id
         WHERE f.status = 'open'
-        ORDER BY f.created_at DESC
+        ORDER BY h.date ASC
     ''').fetchall()
 
     conn.close()
+
+    # Group flags by homily
+    flagged = {}
+    for row in flag_rows:
+        hid = row['homily_id']
+        if hid not in flagged:
+            flagged[hid] = {
+                'homily_id': hid,
+                'date': row['date'],
+                'title': row['spanish_title'] or row['english_title'] or row['occasion'],
+                'comments': [],
+            }
+        flagged[hid]['comments'].append(row['comment'])
+    flags = list(flagged.values())
 
     return render_template('index.html', homilies=homilies, flags=flags)
 

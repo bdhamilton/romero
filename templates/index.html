@@ -192,13 +192,13 @@
         {% if flags %}
         <div class="data-issues">
             <details>
-                <summary>Open data flags ({{ flags|length }})</summary>
+                <summary>Open data flags ({{ flags|length }} homilies)</summary>
                 <ul>
                     {% for f in flags %}
                     <li>
                         <span class="issue-date">{{ f['date'] }}</span> —
-                        <a href="/homily/{{ f['homily_id'] }}/flag">{{ f['spanish_title'] or f['english_title'] or f['occasion'] }}</a>:
-                        {{ f['comment'] }}
+                        <a href="/homily/{{ f['homily_id'] }}/flag">{{ f['title'] }}</a>:
+                        {{ f['comments'] | join('. ') }}
                     </li>
                     {% endfor %}
                 </ul>
