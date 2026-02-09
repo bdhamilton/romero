@@ -69,10 +69,8 @@ romero/
 │   ├── homilies_metadata.json   # Raw scraped metadata (195 homilies)
 │   └── PHASE0_NOTES.md          # Detailed extraction documentation
 ├── templates/                   # Flask templates
-│   ├── base.html
 │   ├── index.html               # Homily browse table (/browse)
 │   └── ngram.html               # Ngram viewer (/)
-└── static/css/style.css
 ```
 
 ## Database Schema

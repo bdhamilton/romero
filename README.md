@@ -1,10 +1,8 @@
 # Romero Ngram Viewer
 
-A work-in-progress text analysis tool for Oscar Romero's homilies (1977-1980), modeled after Google's Ngram Viewer.
+A text analysis tool for Oscar Romero's homilies (1977-1980), modeled after Google's Ngram Viewer. Search for any word or phrase in Spanish and see how its frequency changed over the three years of Romero's preaching.
 
-## Project Status
-
-I've set up a script pipeline that extracts and organizes the data on the Romero Trust website in a SQLite database. You can run it yourself:
+## Quick Start
 
 ```bash
 # 1. Clone repository
@@ -16,19 +14,26 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# 3. Run data collection pipeline (takes ~20 minutes)
-python ./build_database.py
-
-# Result: romero.db (SQLite database with full corpus)
+# 3. Run the web app
+python app.py
+# Open http://localhost:5000
 ```
 
-I've also set up an index to manually review the data. Run it with:
+The ngram viewer is the main page. Browse all homilies at `/browse`.
+
+There's also a CLI tool for terminal use:
 
 ```bash
-python app.py
+python ngram.py pueblo                         # raw count
+python ngram.py "pueblo de dios" --norm words  # per 10k words
+python ngram.py justicia --norm homilies       # per homily
 ```
 
-Once the data is reviewed and confirmed, I'll start building the ngram index and visualization tools.
+To rebuild the database from scratch (downloads from Romero Trust, ~20 minutes):
+
+```bash
+python build_database.py
+```
 
 ## Data Source
 
