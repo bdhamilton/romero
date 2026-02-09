@@ -34,7 +34,8 @@ This is a research tool and proof-of-concept for theological and philosophical r
 - ✓ Search module (`search.py`) — case/accent-insensitive, phrase matching, monthly aggregation
 - ✓ CLI search tool (`ngram.py`) — terminal-based frequency charts
 - ✓ Web ngram viewer (`/`) — Google Ngram-style UI with Chart.js line chart
-- ✓ Homily browser (`/browse`) — table of all homilies with PDF links to Romero Trust, known data issues section
+- ✓ Homily browser (`/browse`) — table of all homilies with PDF links to Romero Trust
+- ✓ Flag system (`/homily/<id>/flag`) — public data issue reporting, open flags shown on browse page
 - ✓ Search API (`/api/search`) — JSON endpoint for ngram queries
 - ✓ Three normalization modes: raw count, per 10K words, per homily
 - ✓ Smoothing (0-3 month moving average)
@@ -71,7 +72,8 @@ romero/
 │   └── PHASE0_NOTES.md          # Detailed extraction documentation
 ├── templates/                   # Flask templates
 │   ├── index.html               # Homily browse table (/browse)
-│   └── ngram.html               # Ngram viewer (/)
+│   ├── ngram.html               # Ngram viewer (/)
+│   └── flag.html                # Flag data issue page (/homily/<id>/flag)
 ```
 
 ## Database Schema
@@ -95,6 +97,15 @@ CREATE TABLE homilies (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_date ON homilies(date);
+
+CREATE TABLE flags (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    homily_id INTEGER REFERENCES homilies(id),
+    comment TEXT NOT NULL,
+    status TEXT DEFAULT 'open',  -- 'open', 'resolved', 'wontfix'
+    resolution TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 - 195 rows, date range: 1977-03-14 to 1980-03-24
@@ -155,81 +166,18 @@ All data collected from the Romero Trust website and stored locally. No further 
 
 **Key decision:** The scraping/extraction pipeline was a one-time bootstrap. From here forward, the database is the canonical dataset. Manual corrections are expected and should be tracked, not avoided.
 
-**Database changes:**
+**Completed:**
+1. ✓ `flags` table — crowdsourced data issue reports (open/resolved/wontfix)
+2. ✓ Flag page (`/homily/<id>/flag`) — read-only homily detail, comment form, existing flags list
+3. ✓ Browse page shows open flags (grouped by homily) in collapsible section
+4. ✓ Each homily row has a flag link
+5. ✓ Initial flags seeded for all 13 homilies with missing Spanish or English text
 
-1. Add `status` column to `homilies` table (default `'active'`). Values: `'active'`, `'not_a_homily'`, `'placeholder'`. The search module and ngram viewer filter on `status = 'active'`. Browse page shows all rows but marks non-active ones visually.
-
-2. New `changelog` table — tracks all editorial changes to homily records:
-   ```sql
-   CREATE TABLE changelog (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       homily_id INTEGER REFERENCES homilies(id),
-       field TEXT,          -- column name changed, or NULL for general note
-       old_value TEXT,
-       new_value TEXT,
-       comment TEXT NOT NULL,
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   ```
-
-3. New `flags` table — crowdsourced data issue reports (no auth required):
-   ```sql
-   CREATE TABLE flags (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       homily_id INTEGER REFERENCES homilies(id),
-       comment TEXT NOT NULL,
-       status TEXT DEFAULT 'open',  -- 'open', 'resolved', 'wontfix'
-       resolution TEXT,             -- filled in when resolved
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   ```
-
-**Build pipeline changes:**
-
-4. Move `build_database.py` into `scripts/` (alongside the other pipeline scripts). It becomes a historical artifact documenting how the initial database was created.
-
-5. Before any destructive operation, `build_database.py` backs up the existing database with a timestamp (e.g., `romero.db.backup.2026-02-08T1430`) instead of silently overwriting.
-
-**Web UI — Browse page (`/browse`):**
-
-6. Each homily row gets two links:
-   - **Edit** (pencil icon or similar) — links to `/homily/<id>/edit` (requires auth)
-   - **Flag** (flag icon) — links to `/homily/<id>/flag` (public, no auth)
-
-7. "Known data issues" section at the top of browse page reads from the `flags` table (open flags) instead of computing missing texts from the database. This makes it a living list that users contribute to.
-
-**Web UI — Flag page (`/homily/<id>/flag`):**
-
-8. Read-only display of all homily fields (date, titles, occasion, biblical refs, text preview, links to PDFs on Romero Trust).
-
-9. Comment box (required) + submit button. Creates a row in the `flags` table. No auth needed — anyone can flag an issue.
-
-10. Below the comment box: list of existing flags for this homily (so users can see what's already been reported).
-
-**Web UI — Edit page (`/homily/<id>/edit`):**
-
-11. Requires auth (simple approach: a shared password or environment variable, not a full user system). Could be as simple as a `?key=SECRET` parameter or a session cookie from a `/login` page.
-
-12. Displays all editable fields for the homily. Each field shows current value in an editable input.
-
-13. Required "reason for change" comment box at the bottom.
-
-14. On save: for each changed field, write a `changelog` row (old value, new value, comment), then update the homily record. All in one transaction.
-
-15. Below the edit form: full changelog history for this homily, and list of flags (with ability to resolve/close them).
-
-**Auth approach:**
-
-16. Minimal: a single admin password set via environment variable (`ROMERO_ADMIN_KEY`). The `/login` page sets a session cookie. Edit pages check for the cookie. Flag pages don't require auth. This is a research tool, not a bank — simple is fine.
-
-**Implementation order:**
-1. Database schema changes (add `status`, create `changelog` and `flags` tables)
-2. Move `build_database.py` to `scripts/`, add backup behavior
-3. Flag page + flags table (public, no auth — simplest useful piece)
-4. Update browse page to show flags instead of computed missing texts
-5. Edit page + changelog table (requires auth)
-6. Add auth (login page, session cookie, env var)
-7. Update search module to filter on `status = 'active'`
+**Remaining:**
+1. Add `status` column to `homilies` table (default `'active'`). Values: `'active'`, `'not_a_homily'`, `'placeholder'`. Filter on `status = 'active'` in search module and ngram viewer. Browse page shows all rows but marks non-active ones visually.
+2. `changelog` table + CLI edit tool for making corrections with audit trail
+3. Move `build_database.py` into `scripts/` with backup-before-overwrite behavior
+4. Update search module to filter on `status = 'active'`
 
 ### Phase 2: Enhancements
 
