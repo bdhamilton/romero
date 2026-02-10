@@ -24,8 +24,8 @@ This is a research tool and proof-of-concept for theological and philosophical r
 
 ## Current Status
 
-**Phase:** 1 (MVP - Spanish Ngram Viewer)
-**Current State:** Core search and visualization working. Ngram viewer is the main page.
+**Phase:** 2 (Enhancements)
+**Current State:** MVP complete and deployed. Spanish ngram viewer, homily browser, flag system, and multi-term comparison all working.
 
 **What exists:**
 - ✓ All 195 homilies scraped, 371 PDFs downloaded, 374 text files extracted
@@ -41,10 +41,7 @@ This is a research tool and proof-of-concept for theological and philosophical r
 - ✓ Smoothing (0-3 month moving average)
 - ✓ Drill-down: click data point → see matching homilies with links to Romero Trust
 - ✓ Multi-term comparison: comma-separated terms plotted on same chart with color coding
-
-**Next steps:**
-1. Data curation system (see Phase 1.5 below)
-2. Context snippets in drill-down (show surrounding text for each match)
+- ✓ Deployed as public web app
 
 ## Project Structure
 
@@ -70,8 +67,6 @@ romero/
 │   ├── homilies_metadata.json   # Raw scraped metadata (195 homilies)
 │   └── PHASE0_NOTES.md          # Detailed extraction documentation
 ├── wsgi.py                      # WSGI entry point for production (OLS lswsgi)
-├── deploy/                      # Deployment config
-│   └── README.md                # Deployment walkthrough
 ├── templates/                   # Flask templates (use url_for() for all internal links)
 │   ├── index.html               # Homily browse table (/browse)
 │   ├── ngram.html               # Ngram viewer (/)
@@ -136,19 +131,17 @@ All data collected from the Romero Trust website and stored locally. No further 
 - Regex order matters in text cleaning: fix hyphens before adding spaces at newlines
 - Inline footnote markers (bare digits) are acceptable noise — too hard to distinguish from real numbers
 
-### Phase 1: MVP - Spanish Ngram Viewer (CURRENT — mostly complete)
+### Phase 1: MVP - Spanish Ngram Viewer (COMPLETE)
 
 **Goal:** Build a working Ngram viewer for Spanish text only.
 
-**Completed:**
-1. ✓ Search module — no pre-built index needed; scanning 186 texts (~6 MB) takes ~0.6s
-2. ✓ Case-insensitive, accent-insensitive (via NFD decomposition), exact phrase matching
-3. ✓ CLI tool (`ngram.py`) with ASCII bar charts and top-homily listings
-4. ✓ Web interface — Google Ngram Viewer-inspired design with Chart.js
-5. ✓ Drill-down: click chart data point → see matching homilies with links to Romero Trust
-
-**Remaining:**
-- ~~Deploy as public web app~~ (DONE — deployed to hmltn.dev/romero/)
+- ✓ Search module — no pre-built index needed; scanning 186 texts (~6 MB) takes ~0.6s
+- ✓ Case-insensitive, accent-insensitive (via NFD decomposition), exact phrase matching
+- ✓ CLI tool (`ngram.py`) with ASCII bar charts and top-homily listings
+- ✓ Web interface — Google Ngram Viewer-inspired design with Chart.js
+- ✓ Drill-down: click chart data point → see matching homilies with links to Romero Trust
+- ✓ Multi-term comparison: comma-separated terms plotted on same chart with color coding
+- ✓ Deployed as public web app
 
 **Technology Stack:**
 - Backend: Python + Flask
@@ -161,38 +154,31 @@ All data collected from the Romero Trust website and stored locally. No further 
 - Y-axis: three modes available (raw count, per 10K words, per homily). Default is raw count.
 - Smoothing: 0-3 month moving average, user-selectable
 - All 37 months have at least 1 homily, so no gap-handling needed
+- The scraping/extraction pipeline was a one-time bootstrap; the database is now the canonical dataset
 
-### Phase 1.5: Data Curation System (NEXT)
+### Phase 1.5: Data Curation System (COMPLETE)
 
-**Goal:** Treat the database as the source of truth (not the scrape pipeline). Build tools for ongoing data correction with full audit trail.
+- ✓ `flags` table — crowdsourced data issue reports (open/resolved/wontfix)
+- ✓ Flag page (`/homily/<id>/flag`) — read-only homily detail, comment form, existing flags list
+- ✓ Browse page shows open flags (grouped by homily) in collapsible section
+- ✓ Each homily row has a flag link
+- ✓ Initial flags seeded for all 13 homilies with missing Spanish or English text
 
-**Key decision:** The scraping/extraction pipeline was a one-time bootstrap. From here forward, the database is the canonical dataset. Manual corrections are expected and should be tracked, not avoided.
+### Phase 2: Enhancements (CURRENT)
 
-**Completed:**
-1. ✓ `flags` table — crowdsourced data issue reports (open/resolved/wontfix)
-2. ✓ Flag page (`/homily/<id>/flag`) — read-only homily detail, comment form, existing flags list
-3. ✓ Browse page shows open flags (grouped by homily) in collapsible section
-4. ✓ Each homily row has a flag link
-5. ✓ Initial flags seeded for all 13 homilies with missing Spanish or English text
+1. Historical event overlay (key dates in Salvadoran history 1977-1980)
+2. Advanced search: wildcards ("liber*"), stemming/lemmatization
+3. Context snippets in drill-down (show surrounding text for each match)
+4. `changelog` table + CLI edit tool for making corrections with audit trail
+5. Export functionality (CSV, JSON)
+6. UI polish and user experience improvements
 
-**Remaining:**
-1. Add `status` column to `homilies` table (default `'active'`). Values: `'active'`, `'not_a_homily'`, `'placeholder'`. Filter on `status = 'active'` in search module and ngram viewer. Browse page shows all rows but marks non-active ones visually.
-2. `changelog` table + CLI edit tool for making corrections with audit trail
-
-### Phase 2: Enhancements
+### Phase 3: Cross-Language Features
 
 1. Add English corpus with language toggle
 2. Cross-language comparison features
-3. Advanced search: wildcards ("liber*"), stemming/lemmatization
-4. UI polish and user experience improvements
-
-### Phase 3: Research Features
-
-1. ~~Multi-term comparison~~ (DONE — moved to Phase 1, implemented in ngram.html)
-2. Export functionality (CSV, JSON)
-3. Historical event overlay (key dates in Salvadoran history 1977-1980)
-4. Biblical reference integration
-5. Audio integration
+3. Biblical reference integration
+4. Audio integration
 
 ## Technical Decisions
 
@@ -244,7 +230,6 @@ python ngram.py "pueblo de dios" --norm words   # per 10k words
 python ngram.py justicia --norm homilies  # per homily
 ```
 
-
 **Date Context:**
 - Romero was Archbishop of San Salvador: February 1977 - March 1980
 - Assassinated: March 24, 1980 (while celebrating Mass)
@@ -253,4 +238,4 @@ python ngram.py justicia --norm homilies  # per homily
 **Language Note:**
 - Spanish is the original language and primary focus
 - English translations exist but may vary in quality/style
-- Cross-language analysis is a secondary goal (Phase 2+)
+- Cross-language analysis is a secondary goal (Phase 3)
