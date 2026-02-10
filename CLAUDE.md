@@ -44,8 +44,7 @@ This is a research tool and proof-of-concept for theological and philosophical r
 
 **Next steps:**
 1. Data curation system (see Phase 1.5 below)
-2. Deploy as public web app
-3. Context snippets in drill-down (show surrounding text for each match)
+2. Context snippets in drill-down (show surrounding text for each match)
 
 ## Project Structure
 
@@ -70,7 +69,10 @@ romero/
 ├── archive/
 │   ├── homilies_metadata.json   # Raw scraped metadata (195 homilies)
 │   └── PHASE0_NOTES.md          # Detailed extraction documentation
-├── templates/                   # Flask templates
+├── wsgi.py                      # WSGI entry point for production (OLS lswsgi)
+├── deploy/                      # Deployment config
+│   └── README.md                # Deployment walkthrough
+├── templates/                   # Flask templates (use url_for() for all internal links)
 │   ├── index.html               # Homily browse table (/browse)
 │   ├── ngram.html               # Ngram viewer (/)
 │   └── flag.html                # Flag data issue page (/homily/<id>/flag)
@@ -146,7 +148,7 @@ All data collected from the Romero Trust website and stored locally. No further 
 5. ✓ Drill-down: click chart data point → see matching homilies with links to Romero Trust
 
 **Remaining:**
-- Deploy as public web app
+- ~~Deploy as public web app~~ (DONE — deployed to hmltn.dev/romero/)
 
 **Technology Stack:**
 - Backend: Python + Flask
@@ -233,7 +235,7 @@ Each development session follows this pattern:
 # Rebuild database from scratch (backs up existing DB first)
 python scripts/build_database.py --skip-scrape --skip-download  # if PDFs already downloaded
 
-# Run web app
+# Run web app locally
 python app.py  # http://localhost:5000 (ngram viewer), /browse (homily table)
 
 # CLI search
@@ -241,6 +243,7 @@ python ngram.py pueblo                    # raw count (default)
 python ngram.py "pueblo de dios" --norm words   # per 10k words
 python ngram.py justicia --norm homilies  # per homily
 ```
+
 
 **Date Context:**
 - Romero was Archbishop of San Salvador: February 1977 - March 1980
