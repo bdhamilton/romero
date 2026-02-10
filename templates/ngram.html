@@ -216,7 +216,7 @@
         <form id="search-form">
             <div class="search-row">
                 <input type="text" id="term" name="term"
-                       placeholder="Enter a word or phrase in Spanish..."
+                       placeholder="Enter words or phrases separated by commas..."
                        autocomplete="off" autofocus>
                 <button type="submit">Search</button>
             </div>
@@ -230,6 +230,9 @@
             <a data-term="esperanza">esperanza</a>,
             <a data-term="pueblo de dios">pueblo de dios</a>,
             <a data-term="iglesia">iglesia</a>
+            &middot; Compare:
+            <a data-term="justicia, paz, violencia">justicia, paz, violencia</a>,
+            <a data-term="pueblo, iglesia">pueblo, iglesia</a>
         </div>
 
         <div class="status" id="status"></div>
@@ -267,6 +270,17 @@
 <script>
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
+const COLORS = [
+    { border: '#4285f4', bg: 'rgba(66, 133, 244, 0.08)' },
+    { border: '#ea4335', bg: 'rgba(234, 67, 53, 0.08)' },
+    { border: '#34a853', bg: 'rgba(52, 168, 83, 0.08)' },
+    { border: '#fbbc04', bg: 'rgba(251, 188, 4, 0.08)' },
+    { border: '#9334e6', bg: 'rgba(147, 52, 230, 0.08)' },
+    { border: '#ff6d01', bg: 'rgba(255, 109, 1, 0.08)' },
+    { border: '#46bdc6', bg: 'rgba(70, 189, 198, 0.08)' },
+    { border: '#e52592', bg: 'rgba(229, 37, 146, 0.08)' },
+];
+
 function formatMonth(ym) {
     const [y, m] = ym.split('-');
     return MONTH_NAMES[parseInt(m) - 1] + ' ' + y;
@@ -284,7 +298,7 @@ function smooth(values, window) {
 }
 
 let chartInstance = null;
-let lastResult = null;
+let lastResults = [];  // array of search results, one per term
 
 function getValues(data, metric) {
     return data.months.map(m => {
@@ -300,18 +314,41 @@ function metricLabel(metric) {
     return 'occurrences';
 }
 
-function renderChart(data) {
+function renderChart(results) {
     const container = document.getElementById('chart-container');
     const info = document.getElementById('chart-info');
     const drilldown = document.getElementById('drilldown');
     const metric = document.getElementById('norm').value;
     const smoothing = parseInt(document.getElementById('smoothing').value);
+    const multiTerm = results.length > 1;
 
-    const labels = data.months.map(m => formatMonth(m.month));
-    const raw = getValues(data, metric);
-    const values = smooth(raw, smoothing);
+    // All results share the same month labels (search returns all 37 months)
+    const labels = results[0].months.map(m => formatMonth(m.month));
 
-    info.textContent = `"${data.term}" — ${data.total_count.toLocaleString()} occurrences in ${data.total_homilies} homilies`;
+    // Build datasets
+    const datasets = results.map((data, i) => {
+        const color = COLORS[i % COLORS.length];
+        const raw = getValues(data, metric);
+        const values = smooth(raw, smoothing);
+        return {
+            label: data.term,
+            data: values,
+            borderColor: color.border,
+            backgroundColor: color.bg,
+            fill: !multiTerm,  // fill only for single term
+            tension: 0.25,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            pointBackgroundColor: color.border,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1.5,
+            borderWidth: 2,
+        };
+    });
+
+    // Info line
+    const parts = results.map(d => `"${d.term}" (${d.total_count.toLocaleString()} in ${d.total_homilies})`);
+    info.textContent = parts.join('  ·  ');
 
     if (chartInstance) chartInstance.destroy();
 
@@ -320,23 +357,7 @@ function renderChart(data) {
 
     chartInstance = new Chart(document.getElementById('chart'), {
         type: 'line',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: data.term,
-                data: values,
-                borderColor: '#4285f4',
-                backgroundColor: 'rgba(66, 133, 244, 0.08)',
-                fill: true,
-                tension: 0.25,
-                pointRadius: 3,
-                pointHoverRadius: 6,
-                pointBackgroundColor: '#4285f4',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 1.5,
-                borderWidth: 2,
-            }]
-        },
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: true,
@@ -346,7 +367,15 @@ function renderChart(data) {
                 mode: 'index',
             },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: multiTerm,
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 16,
+                        font: { size: 13 },
+                    }
+                },
                 tooltip: {
                     backgroundColor: '#fff',
                     titleColor: '#202124',
@@ -355,24 +384,27 @@ function renderChart(data) {
                     borderWidth: 1,
                     cornerRadius: 8,
                     padding: 10,
-                    displayColors: false,
+                    displayColors: multiTerm,
                     callbacks: {
                         title: function(items) {
                             return items[0].label;
                         },
                         label: function(item) {
+                            const data = results[item.datasetIndex];
                             const m = data.months[item.dataIndex];
                             const val = item.parsed.y;
                             const label = metricLabel(metric);
                             let s = Number.isInteger(val) ? val.toLocaleString() : val.toFixed(1);
-                            let line = s + ' ' + label;
+                            let prefix = multiTerm ? data.term + ': ' : '';
+                            let line = prefix + s + ' ' + label;
                             if (metric !== 'count') {
                                 line += ' (' + m.count + ' total)';
                             }
                             return line;
                         },
-                        afterLabel: function(item) {
-                            const m = data.months[item.dataIndex];
+                        afterBody: function(items) {
+                            if (multiTerm) return '';
+                            const m = results[0].months[items[0].dataIndex];
                             return m.num_homilies + ' homilies this month';
                         }
                     }
@@ -406,8 +438,8 @@ function renderChart(data) {
             },
             onClick: function(evt, elements) {
                 if (elements.length > 0) {
-                    const idx = elements[0].index;
-                    showDrilldown(data, idx);
+                    const el = elements[0];
+                    showDrilldown(results, el.index, el.datasetIndex);
                 }
             }
         }
@@ -420,66 +452,102 @@ function formatDate(dateStr) {
     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function showDrilldown(data, monthIndex) {
-    const m = data.months[monthIndex];
+function showDrilldown(results, monthIndex, datasetIndex) {
     const el = document.getElementById('drilldown');
+    const multiTerm = results.length > 1;
 
-    if (m.count === 0) {
+    // For multi-term, show all terms for this month. For single-term, same as before.
+    const termsToShow = multiTerm ? results : [results[datasetIndex]];
+    const monthLabel = formatMonth(results[0].months[monthIndex].month);
+
+    let html = '';
+    for (const data of termsToShow) {
+        const m = data.months[monthIndex];
+        if (m.count === 0) continue;
+
+        const homilies = m.homilies.slice().sort((a, b) => b.count - a.count);
+        const color = COLORS[results.indexOf(data) % COLORS.length];
+
+        if (multiTerm) {
+            html += `<h3 style="color: ${color.border}">${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
+        } else {
+            html += `<h3>${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
+        }
+        html += '<ul class="drilldown-list">';
+        for (const h of homilies) {
+            const title = h.detail_url
+                ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
+                : h.title;
+            html += `<li>
+                <span class="drilldown-count">${h.count}x</span>
+                <span class="drilldown-date">${formatDate(h.date)}</span>
+                <span class="drilldown-title">${title}</span>
+            </li>`;
+        }
+        html += '</ul>';
+    }
+
+    if (!html) {
         el.style.display = 'none';
         return;
     }
-
-    const homilies = m.homilies.slice().sort((a, b) => b.count - a.count);
-    const monthLabel = formatMonth(m.month);
-
-    let html = `<h3>${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
-    html += '<ul class="drilldown-list">';
-    for (const h of homilies) {
-        const title = h.detail_url
-            ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
-            : h.title;
-        html += `<li>
-            <span class="drilldown-count">${h.count}x</span>
-            <span class="drilldown-date">${formatDate(h.date)}</span>
-            <span class="drilldown-title">${title}</span>
-        </li>`;
-    }
-    html += '</ul>';
 
     el.innerHTML = html;
     el.style.display = 'block';
 }
 
-async function doSearch(term) {
+function parseTerms(input) {
+    return input.split(',').map(t => t.trim()).filter(t => t.length > 0);
+}
+
+async function doSearch(input) {
     const status = document.getElementById('status');
     const container = document.getElementById('chart-container');
     const drilldown = document.getElementById('drilldown');
+
+    const terms = parseTerms(input);
+    if (terms.length === 0) return;
 
     status.textContent = 'Searching...';
     container.style.display = 'none';
     drilldown.style.display = 'none';
 
     try {
-        const resp = await fetch('/api/search?term=' + encodeURIComponent(term));
-        const data = await resp.json();
+        // Fetch all terms in parallel
+        const fetches = terms.map(term =>
+            fetch('/api/search?term=' + encodeURIComponent(term)).then(r => r.json())
+        );
+        const results = await Promise.all(fetches);
 
-        if (data.error) {
-            status.textContent = data.error;
+        // Check for errors
+        const errors = results.filter(d => d.error);
+        if (errors.length > 0) {
+            status.textContent = errors.map(d => d.error).join('; ');
             return;
         }
 
-        if (data.total_count === 0) {
-            status.textContent = `No results for "${term}"`;
+        // Filter out terms with zero results
+        const hasResults = results.filter(d => d.total_count > 0);
+        const noResults = results.filter(d => d.total_count === 0);
+
+        if (hasResults.length === 0) {
+            status.textContent = `No results for "${terms.join('", "')}"`;
             return;
         }
 
-        status.textContent = '';
-        lastResult = data;
-        renderChart(data);
+        // Show warning for terms with no results, but still plot the rest
+        if (noResults.length > 0) {
+            status.textContent = `No results for: ${noResults.map(d => '"' + d.term + '"').join(', ')}`;
+        } else {
+            status.textContent = '';
+        }
 
-        // Update URL
+        lastResults = hasResults;
+        renderChart(hasResults);
+
+        // Update URL with comma-separated terms
         const url = new URL(window.location);
-        url.searchParams.set('term', term);
+        url.searchParams.set('term', terms.join(','));
         history.replaceState(null, '', url);
 
     } catch (e) {
@@ -490,8 +558,8 @@ async function doSearch(term) {
 // Search form
 document.getElementById('search-form').addEventListener('submit', function(e) {
     e.preventDefault();
-    const term = document.getElementById('term').value.trim();
-    if (term) doSearch(term);
+    const input = document.getElementById('term').value.trim();
+    if (input) doSearch(input);
 });
 
 // Example links
@@ -505,10 +573,10 @@ document.getElementById('examples').addEventListener('click', function(e) {
 
 // Re-render on control change
 document.getElementById('norm').addEventListener('change', function() {
-    if (lastResult) renderChart(lastResult);
+    if (lastResults.length) renderChart(lastResults);
 });
 document.getElementById('smoothing').addEventListener('change', function() {
-    if (lastResult) renderChart(lastResult);
+    if (lastResults.length) renderChart(lastResults);
 });
 
 // Auto-search from URL
