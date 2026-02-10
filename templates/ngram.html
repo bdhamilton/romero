@@ -266,7 +266,7 @@
 
         <div class="footer">
             <p>Data sourced from <a href="https://www.romerotrust.org.uk" target="_blank">The Romero Trust</a>
-            &middot; <a href="/browse">Browse all homilies</a></p>
+            &middot; <a href="browse">Browse all homilies</a></p>
         </div>
     </div>
 
@@ -518,7 +518,7 @@ async function doSearch(input) {
     try {
         // Fetch all terms in parallel
         const fetches = terms.map(term =>
-            fetch('/api/search?term=' + encodeURIComponent(term)).then(r => r.json())
+            fetch('api/search?term=' + encodeURIComponent(term)).then(r => r.json())
         );
         const results = await Promise.all(fetches);
 
