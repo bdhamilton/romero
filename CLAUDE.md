@@ -40,12 +40,12 @@ This is a research tool and proof-of-concept for theological and philosophical r
 - ✓ Three normalization modes: raw count, per 10K words, per homily
 - ✓ Smoothing (0-3 month moving average)
 - ✓ Drill-down: click data point → see matching homilies with links to Romero Trust
+- ✓ Multi-term comparison: comma-separated terms plotted on same chart with color coding
 
 **Next steps:**
 1. Data curation system (see Phase 1.5 below)
 2. Deploy as public web app
 3. Context snippets in drill-down (show surrounding text for each match)
-4. Multi-term comparison (plot multiple words on same chart)
 
 ## Project Structure
 
@@ -186,7 +186,7 @@ All data collected from the Romero Trust website and stored locally. No further 
 
 ### Phase 3: Research Features
 
-1. Multi-term comparison (plot multiple words on same graph)
+1. ~~Multi-term comparison~~ (DONE — moved to Phase 1, implemented in ngram.html)
 2. Export functionality (CSV, JSON)
 3. Historical event overlay (key dates in Salvadoran history 1977-1980)
 4. Biblical reference integration

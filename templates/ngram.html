@@ -155,6 +155,9 @@
             color: #202124;
             margin-bottom: 12px;
         }
+        .drilldown h3 + ul + h3 {
+            margin-top: 16px;
+        }
         .drilldown-list {
             list-style: none;
         }
@@ -347,7 +350,7 @@ function renderChart(results) {
     });
 
     // Info line
-    const parts = results.map(d => `"${d.term}" (${d.total_count.toLocaleString()} in ${d.total_homilies})`);
+    const parts = results.map(d => `"${d.term}" — ${d.total_count.toLocaleString()} occurrences in ${d.total_homilies} homilies`);
     info.textContent = parts.join('  ·  ');
 
     if (chartInstance) chartInstance.destroy();
@@ -469,7 +472,7 @@ function showDrilldown(results, monthIndex, datasetIndex) {
         const color = COLORS[results.indexOf(data) % COLORS.length];
 
         if (multiTerm) {
-            html += `<h3 style="color: ${color.border}">${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
+            html += `<h3 style="margin-top: 1em; color: ${color.border}">${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
         } else {
             html += `<h3>${monthLabel} — ${m.count} occurrence${m.count !== 1 ? 's' : ''} of \u201c${data.term}\u201d in ${homilies.length} homil${homilies.length !== 1 ? 'ies' : 'y'}</h3>`;
         }
