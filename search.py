@@ -3,6 +3,10 @@ Search module for Romero homilies corpus.
 
 Provides word/phrase frequency search across Spanish texts,
 with accent-insensitive matching and monthly aggregation.
+
+Uses pre-folded text (spanish_text_folded) and pre-computed word counts
+(spanish_word_count) from the database for fast regex-based search.
+Run scripts/build_search_index.py to populate these columns.
 """
 
 import sqlite3
@@ -21,6 +25,16 @@ def fold_accents(text):
 def tokenize(text):
     """Split text into lowercase word tokens."""
     return re.findall(r'\w+', text.lower(), re.UNICODE)
+
+
+def _build_pattern(search_tokens):
+    """Build a compiled regex pattern from search tokens.
+
+    Single word: r'\\bviolencia\\b'
+    Phrase:      r'\\bpueblo\\W+de\\W+dios\\b'
+    """
+    escaped = [re.escape(t) for t in search_tokens]
+    return re.compile(r'\b' + r'\W+'.join(escaped) + r'\b', re.UNICODE)
 
 
 def search_corpus(term, db_path='romero.db', accent_sensitive=False):
@@ -44,14 +58,14 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
         return {'term': term, 'tokens': [], 'elapsed': 0,
                 'total_count': 0, 'total_homilies': 0, 'months': OrderedDict()}
 
-    n = len(search_tokens)
+    pattern = _build_pattern(search_tokens)
 
-    # Fetch all Spanish texts
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        'SELECT id, date, occasion, spanish_title, spanish_text, detail_url '
-        'FROM homilies WHERE spanish_text IS NOT NULL ORDER BY date'
+        'SELECT id, date, occasion, spanish_title, spanish_text_folded, '
+        'spanish_word_count, detail_url '
+        'FROM homilies WHERE spanish_text_folded IS NOT NULL ORDER BY date'
     ).fetchall()
     conn.close()
 
@@ -61,20 +75,15 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
     total_homilies = 0
 
     for row in rows:
-        text = row['spanish_text']
         month = row['date'][:7]
-        tokens = tokenize(normalize(text))
-        word_count = len(tokens)
 
-        # Count phrase matches (works for single words too)
-        count = 0
-        for i in range(len(tokens) - n + 1):
-            if tokens[i:i + n] == search_tokens:
-                count += 1
+        # Count matches using pre-folded text and compiled regex
+        matches = pattern.findall(row['spanish_text_folded'])
+        count = len(matches)
 
         if month not in months:
             months[month] = {'count': 0, 'total_words': 0, 'num_homilies': 0, 'homilies': []}
-        months[month]['total_words'] += word_count
+        months[month]['total_words'] += row['spanish_word_count']
         months[month]['num_homilies'] += 1
 
         if count > 0:

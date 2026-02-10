@@ -136,6 +136,7 @@ def main():
     # These steps always run
     steps.append((str(PROJECT_ROOT / 'scripts/03_extract_text.py'), 'Extract text from all PDFs', True))
     steps.append((str(PROJECT_ROOT / 'scripts/04_create_database.py'), 'Create SQLite database and load data', False))
+    steps.append((str(PROJECT_ROOT / 'scripts/build_search_index.py'), 'Build search index (pre-fold text)', False))
 
     # Summary
     print(f"\nPipeline: {len(steps)} steps to execute")
