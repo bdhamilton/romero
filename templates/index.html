@@ -185,7 +185,7 @@
 <body>
     <div class="page">
         <div class="header">
-            <h1><a href="/">Romero Ngram Viewer</a></h1>
+            <h1><a href="{{ url_for('ngram_viewer') }}">Romero Ngram Viewer</a></h1>
             <p class="subtitle">{{ homilies|length }} homilies &middot; March 1977 – March 1980</p>
         </div>
 
@@ -197,7 +197,7 @@
                     {% for f in flags %}
                     <li>
                         <span class="issue-date">{{ f['date'] }}</span> —
-                        <a href="/homily/{{ f['homily_id'] }}/flag">{{ f['title'] }}</a>:
+                        <a href="{{ url_for('flag_homily', homily_id=f['homily_id']) }}">{{ f['title'] }}</a>:
                         {{ f['comments'] | join('. ') }}
                     </li>
                     {% endfor %}
@@ -240,7 +240,7 @@
                         {% endif %}
                     </td>
                     <td class="col-refs">{{ homily['biblical_references'] or '—' }}</td>
-                    <td class="col-flag"><a href="/homily/{{ homily['id'] }}/flag" title="Flag a data issue">flag</a></td>
+                    <td class="col-flag"><a href="{{ url_for('flag_homily', homily_id=homily['id']) }}" title="Flag a data issue">flag</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -248,7 +248,7 @@
 
         <div class="footer">
             <p>Data sourced from <a href="https://www.romerotrust.org.uk" target="_blank">The Romero Trust</a>
-            &middot; <a href="/">Ngram Viewer</a></p>
+            &middot; <a href="{{ url_for('ngram_viewer') }}">Ngram Viewer</a></p>
         </div>
     </div>
 </body>

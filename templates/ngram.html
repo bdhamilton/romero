@@ -266,11 +266,12 @@
 
         <div class="footer">
             <p>Data sourced from <a href="https://www.romerotrust.org.uk" target="_blank">The Romero Trust</a>
-            &middot; <a href="browse">Browse all homilies</a></p>
+            &middot; <a href="{{ url_for('browse') }}">Browse all homilies</a></p>
         </div>
     </div>
 
 <script>
+const SEARCH_URL = {{ url_for('api_search') | tojson }};
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const COLORS = [
@@ -518,7 +519,7 @@ async function doSearch(input) {
     try {
         // Fetch all terms in parallel
         const fetches = terms.map(term =>
-            fetch('api/search?term=' + encodeURIComponent(term)).then(r => r.json())
+            fetch(SEARCH_URL + '?term=' + encodeURIComponent(term)).then(r => r.json())
         );
         const results = await Promise.all(fetches);
 
