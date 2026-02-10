@@ -8,10 +8,6 @@ venv/
 ENV/
 env/
 
-# Project-specific
-homilies/
-*.db
-
 # OS
 .DS_Store
 .AppleDouble
