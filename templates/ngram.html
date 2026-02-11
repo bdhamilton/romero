@@ -132,14 +132,6 @@
             padding: 16px 16px 8px;
             background: #fff;
         }
-        .chart-info {
-            font-size: 13px;
-            color: #9aa0a6;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #e8eaed;
-            text-align: center;
-        }
 
         /* Drilldown */
         .drilldown {
@@ -242,7 +234,6 @@
 
         <div class="chart-container" id="chart-container" style="display:none">
             <canvas id="chart"></canvas>
-            <div class="chart-info" id="chart-info"></div>
             <div class="controls">
                 <label for="norm">Y-axis:</label>
                 <select id="norm">
@@ -320,7 +311,6 @@ function metricLabel(metric) {
 
 function renderChart(results) {
     const container = document.getElementById('chart-container');
-    const info = document.getElementById('chart-info');
     const drilldown = document.getElementById('drilldown');
     const metric = document.getElementById('norm').value;
     const smoothing = parseInt(document.getElementById('smoothing').value);
@@ -350,9 +340,6 @@ function renderChart(results) {
         };
     });
 
-    // Info line
-    const parts = results.map(d => `"${d.term}" — ${d.total_count.toLocaleString()} occurrences in ${d.total_homilies} homilies`);
-    info.textContent = parts.join('  ·  ');
 
     if (chartInstance) chartInstance.destroy();
 
@@ -520,8 +507,8 @@ function showTopHomilies(results) {
         const color = COLORS[results.indexOf(data) % COLORS.length];
 
         const heading = multiTerm
-            ? `<h3 style="color: ${color.border}">Top homilies for \u201c${data.term}\u201d (${data.total_count} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`
-            : `<h3>Top homilies for \u201c${data.term}\u201d (${data.total_count} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`;
+            ? `<h3 style="color: ${color.border}">Top homilies for \u201c${data.term}\u201d (${data.total_count.toLocaleString()} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`
+            : `<h3>Top homilies for \u201c${data.term}\u201d (${data.total_count.toLocaleString()} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`;
         html += heading;
 
         html += '<ul class="drilldown-list">';
@@ -628,12 +615,11 @@ document.getElementById('smoothing').addEventListener('change', function() {
     if (lastResults.length) { renderChart(lastResults); showTopHomilies(lastResults); }
 });
 
-// Auto-search from URL
+// Auto-search from URL, or default to pueblo,iglesia
 const params = new URLSearchParams(window.location.search);
-if (params.get('term')) {
-    document.getElementById('term').value = params.get('term');
-    doSearch(params.get('term'));
-}
+const initialTerm = params.get('term') || 'pueblo, iglesia';
+document.getElementById('term').value = initialTerm;
+doSearch(initialTerm);
 </script>
 </body>
 </html>
