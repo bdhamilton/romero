@@ -16,44 +16,75 @@ def get_homilies_from_index():
     """
     Scrape the index page for basic homily metadata.
 
+    Anchors on title links (div.views-field-title) rather than occasion divs,
+    because some entries on the Romero Trust site have malformed HTML where the
+    occasion field uses the wrong CSS class.
+
     Returns:
         List of dicts with occasion, title, url, date, has_audio, biblical_references
     """
     index_url = "https://www.romerotrust.org.uk/homilies-and-writing/homilies/"
     response = requests.get(index_url)
     soup = BeautifulSoup(response.content, 'html.parser')
-    homily_occasions = soup.find_all("div", class_="field-name-field-homily-occasion")
+    title_blocks = soup.find_all("div", class_="views-field-title")
 
     homilies = []
-    for occasion in homily_occasions:
-        # Get data blocks for this homily
-        title_block = occasion.find_next_sibling("div", class_="views-field-title")
-        date_block = occasion.find_next_sibling("div", class_="field-name-field-date")
+    for title_block in title_blocks:
+        # Find the date: next sibling div.field-name-field-date with a date span inside
+        date_block = None
+        for sib in title_block.next_siblings:
+            if getattr(sib, "name", None) == "div" and "field-name-field-date" in (sib.get("class") or []):
+                if sib.find("span", class_="date-display-single"):
+                    date_block = sib
+                    break
+        if date_block is None:
+            continue  # skip entries without a parseable date
 
-        # References might or might not exist; look for a <p> before the next occasion
+        date_obj = datetime.strptime(
+            date_block.find("span", class_="date-display-single").get_text(strip=True),
+            "%d %B %Y"
+        ).date()
+
+        # Find the occasion: look at previous siblings for div.field-name-field-homily-occasion.
+        # Some entries have the occasion mislabeled as field-name-field-date (without a date
+        # span inside), so fall back to that.
+        occasion_text = ""
+        for sib in title_block.previous_siblings:
+            if getattr(sib, "name", None) != "div":
+                continue
+            classes = sib.get("class") or []
+            if "field-name-field-homily-occasion" in classes:
+                occasion_text = sib.get_text(strip=True)
+                break
+            # Mislabeled occasion: has the date class but no date span
+            if "field-name-field-date" in classes and not sib.find("span", class_="date-display-single"):
+                occasion_text = sib.get_text(strip=True)
+                break
+            # Stop if we hit another title (we've gone too far)
+            if "views-field-title" in classes:
+                break
+
+        # References/audio: gather <p> tags after the date until the next title block
         references_text = ""
         for sib in date_block.next_siblings:
             name = getattr(sib, "name", None)
             classes = (sib.get("class") or []) if name else []
-            if name == "div" and "field-name-field-homily-occasion" in classes:
-                break  # reached the next homily; stop
+            if name == "div" and ("views-field-title" in classes or "field-name-field-homily-occasion" in classes):
+                break  # reached the next homily
             if name == "p":
                 references_text = sib.get_text(" ", strip=True).replace("\xa0", " ")
                 break
 
-        # Parse needed fields
-        date_obj = datetime.strptime(date_block.get_text(strip=True), "%d %B %Y").date()
-
         # Check for audio
         has_audio = "AUDIO" in references_text
 
-        # Try to remove audio indicators from references string
+        # Remove audio indicators from references string
         for marker in ["(+AUDIO)", "(+ AUDIO)", "AUDIO"]:
             references_text = references_text.replace(marker, "")
         references_text = references_text.strip()
 
         homilies.append({
-            "occasion": occasion.get_text(strip=True),
+            "occasion": occasion_text,
             "title": title_block.get_text(strip=True),
             "url": title_block.a["href"],
             "date": date_obj.isoformat(),

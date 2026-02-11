@@ -12,7 +12,9 @@
       "Bash(python:*)",
       "Bash(python3:*)",
       "Bash(ls:*)",
-      "Bash(venv/bin/python:*)"
+      "Bash(venv/bin/python:*)",
+      "Skill(deploy)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
