@@ -1,4 +1,4 @@
-# Dev dependencies, for the initial data scrap
+# Dev dependencies, for the initial data scrape
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 pdfplumber>=0.10.0
