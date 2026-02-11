@@ -502,6 +502,48 @@ function showDrilldown(results, monthIndex, datasetIndex) {
     el.style.display = 'block';
 }
 
+function showTopHomilies(results) {
+    const el = document.getElementById('drilldown');
+    const multiTerm = results.length > 1;
+
+    let html = '';
+    for (const data of results) {
+        // Collect all homilies across all months
+        const all = [];
+        for (const m of data.months) {
+            for (const h of m.homilies) all.push(h);
+        }
+        if (all.length === 0) continue;
+
+        all.sort((a, b) => b.count - a.count);
+        const top = all.slice(0, 5);
+        const color = COLORS[results.indexOf(data) % COLORS.length];
+
+        const heading = multiTerm
+            ? `<h3 style="color: ${color.border}">Top homilies for \u201c${data.term}\u201d (${data.total_count} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`
+            : `<h3>Top homilies for \u201c${data.term}\u201d (${data.total_count} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`;
+        html += heading;
+
+        html += '<ul class="drilldown-list">';
+        for (const h of top) {
+            const title = h.detail_url
+                ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
+                : h.title;
+            html += `<li>
+                <span class="drilldown-count">${h.count}x</span>
+                <span class="drilldown-date">${formatDate(h.date)}</span>
+                <span class="drilldown-title">${title}</span>
+            </li>`;
+        }
+        html += '</ul>';
+    }
+
+    if (html) {
+        el.innerHTML = html;
+        el.style.display = 'block';
+    }
+}
+
 function parseTerms(input) {
     return input.split(',').map(t => t.trim()).filter(t => t.length > 0);
 }
@@ -550,6 +592,7 @@ async function doSearch(input) {
 
         lastResults = hasResults;
         renderChart(hasResults);
+        showTopHomilies(hasResults);
 
         // Update URL with comma-separated terms
         const url = new URL(window.location);
@@ -579,10 +622,10 @@ document.getElementById('examples').addEventListener('click', function(e) {
 
 // Re-render on control change
 document.getElementById('norm').addEventListener('change', function() {
-    if (lastResults.length) renderChart(lastResults);
+    if (lastResults.length) { renderChart(lastResults); showTopHomilies(lastResults); }
 });
 document.getElementById('smoothing').addEventListener('change', function() {
-    if (lastResults.length) renderChart(lastResults);
+    if (lastResults.length) { renderChart(lastResults); showTopHomilies(lastResults); }
 });
 
 // Auto-search from URL
