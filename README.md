@@ -40,7 +40,7 @@ python scripts/build_database.py
 All homilies sourced from [The Romero Trust](https://www.romerotrust.org.uk/homilies-and-writing/homilies/), which provides PDFs and audio recordings of Romero's preaching. When complete, this site will just act as a window back to the Romero Trust website--a different way of viewing their data, rather than a duplication of their data.
 
 **Coverage:**
-- **195 homilies** from March 14, 1977 (his first homily as Archbishop) to March 24, 1980 (day of assassination)
-- **Spanish text** extracted for 186 homilies (9 missing — mostly audio-only or special events)
-- **English text** extracted for 188 homilies (7 missing)
-- **Audio recordings** for 172 homilies (~88%)
+- **197 homilies** from March 14, 1977 (his first homily as Archbishop) to March 24, 1980 (day of assassination)
+- **Spanish text** extracted for 188 homilies (9 missing — mostly audio-only or special events)
+- **English text** extracted for 190 homilies (7 missing)
+- **Audio recordings** for 172 homilies (~87%)

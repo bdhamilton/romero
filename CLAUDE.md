@@ -28,32 +28,37 @@ This is a research tool and proof-of-concept for theological and philosophical r
 **Current State:** MVP complete and deployed. Spanish ngram viewer, homily browser, flag system, and multi-term comparison all working.
 
 **What exists:**
-- ✓ All 195 homilies scraped, 371 PDFs downloaded, 374 text files extracted
-- ✓ SQLite database (`romero.db`) with all data: 186 Spanish texts, 188 English texts
+- ✓ All 197 homilies scraped, 375 PDFs downloaded, 378 text files extracted
+- ✓ SQLite database (`romero.db`) with all data: 188 Spanish texts, 190 English texts
 - ✓ Full data pipeline (`build_database.py`) that can rebuild everything from scratch
+- ✓ Pre-folded search index (`build_search_index.py`) for fast accent/case-insensitive search
 - ✓ Search module (`search.py`) — case/accent-insensitive, phrase matching, monthly aggregation
 - ✓ CLI search tool (`ngram.py`) — terminal-based frequency charts
 - ✓ Web ngram viewer (`/`) — Google Ngram-style UI with Chart.js line chart
 - ✓ Homily browser (`/browse`) — table of all homilies with PDF links to Romero Trust
 - ✓ Flag system (`/homily/<id>/flag`) — public data issue reporting, open flags shown on browse page
 - ✓ Search API (`/api/search`) — JSON endpoint for ngram queries
-- ✓ Three normalization modes: raw count, per 10K words, per homily
-- ✓ Smoothing (0-3 month moving average)
+- ✓ Three normalization modes: raw count, per 10K words, per homily (default: per 10K words)
+- ✓ Smoothing (0-3 month moving average, default: 1)
 - ✓ Drill-down: click data point → see matching homilies with links to Romero Trust
+- ✓ Top 5 homilies by frequency shown after each search
 - ✓ Multi-term comparison: comma-separated terms plotted on same chart with color coding
+- ✓ Default search ("pueblo, iglesia") on page load
 - ✓ Deployed as public web app
 
 ## Project Structure
 
 ```
 romero/
-├── romero.db                    # SQLite database (13 MB, all data)
+├── romero.db                    # SQLite database (19 MB, all data)
 ├── app.py                       # Flask web app (ngram viewer + browse + API)
-├── search.py                    # Search module (accent folding, tokenization, monthly aggregation)
+├── search.py                    # Search module (uses pre-folded text, monthly aggregation)
 ├── ngram.py                     # CLI search tool (terminal frequency charts)
 ├── requirements.txt             # Python deps: requests, bs4, pdfplumber, flask
 ├── scripts/
-│   ├── build_database.py           # Master pipeline (historical — backs up DB before rebuild)
+│   ├── build_database.py           # Master pipeline (backs up DB before rebuild)
+│   ├── build_search_index.py       # Pre-fold text + word counts for fast search
+│   ├── add_missing_homilies.py     # One-time fix for 2 homilies missed by original scrape
 │   ├── 01_scrape_all_metadata.py   # Scrape Romero Trust website
 │   ├── 02_download_pdfs.py         # Download PDFs (rate-limited)
 │   ├── 03_extract_text.py          # Extract text with pdfplumber
@@ -64,7 +69,7 @@ romero/
 │       ├── spanish.pdf / english.pdf
 │       └── spanish.txt / english.txt
 ├── archive/
-│   ├── homilies_metadata.json   # Raw scraped metadata (195 homilies)
+│   ├── homilies_metadata.json   # Raw scraped metadata (197 homilies)
 │   └── PHASE0_NOTES.md          # Detailed extraction documentation
 ├── wsgi.py                      # WSGI entry point for production (OLS lswsgi)
 ├── templates/                   # Flask templates (use url_for() for all internal links)
@@ -91,6 +96,8 @@ CREATE TABLE homilies (
     spanish_text TEXT,           -- Cleaned extracted text
     english_text TEXT,
     audio_url TEXT,
+    spanish_text_folded TEXT,   -- Pre-folded (accent-stripped, lowercased) for fast search
+    spanish_word_count INTEGER, -- Pre-computed token count for normalization
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_date ON homilies(date);
@@ -105,8 +112,8 @@ CREATE TABLE flags (
 );
 ```
 
-- 195 rows, date range: 1977-03-14 to 1980-03-24
-- 186 with Spanish text, 188 with English text (9 missing Spanish, 7 missing English)
+- 197 rows, date range: 1977-03-14 to 1980-03-24
+- 188 with Spanish text, 190 with English text (9 missing Spanish, 7 missing English)
 - Flat structure (one row per homily) — always exactly 1 English + 1 Spanish PDF per homily
 
 ## Development Phases
@@ -126,7 +133,7 @@ All data collected from the Romero Trust website and stored locally. No further 
 - PDFs are text-based (not scanned) — no OCR needed
 - pdfplumber handles column boundaries correctly; PyPDF2 does not (caused word concatenation)
 - Date formatting is perfectly consistent: "DD Month YYYY"
-- 195 homilies total, 172 with audio recordings
+- 197 homilies total, 172 with audio recordings
 - 4 homilies are audio-only (no PDFs) — legitimate edge cases
 - Regex order matters in text cleaning: fix hyphens before adding spaces at newlines
 - Inline footnote markers (bare digits) are acceptable noise — too hard to distinguish from real numbers
@@ -135,7 +142,7 @@ All data collected from the Romero Trust website and stored locally. No further 
 
 **Goal:** Build a working Ngram viewer for Spanish text only.
 
-- ✓ Search module — no pre-built index needed; scanning 186 texts (~6 MB) takes ~0.6s
+- ✓ Search module — pre-folded text columns for fast accent/case-insensitive search
 - ✓ Case-insensitive, accent-insensitive (via NFD decomposition), exact phrase matching
 - ✓ CLI tool (`ngram.py`) with ASCII bar charts and top-homily listings
 - ✓ Web interface — Google Ngram Viewer-inspired design with Chart.js
@@ -150,9 +157,9 @@ All data collected from the Romero Trust website and stored locally. No further 
 - No heavy frameworks — prioritize simplicity
 
 **Key decisions made:**
-- No pre-built ngram index — brute-force tokenize+scan is fast enough at this corpus size
-- Y-axis: three modes available (raw count, per 10K words, per homily). Default is raw count.
-- Smoothing: 0-3 month moving average, user-selectable
+- Pre-folded text columns (accent-stripped, lowercased) avoid per-request text processing
+- Y-axis: three modes available (raw count, per 10K words, per homily). Default is per 10K words.
+- Smoothing: 0-3 month moving average, user-selectable. Default is 1.
 - All 37 months have at least 1 homily, so no gap-handling needed
 - The scraping/extraction pipeline was a one-time bootstrap; the database is now the canonical dataset
 
