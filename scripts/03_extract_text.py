@@ -31,8 +31,8 @@ def clean_text(text):
     text = re.sub(r'([^\s])\n([^\s])', r'\1 \2', text)
 
     # Remove common headers and footers
-    # Spanish running headers: "‡ Ciclo C, 1977 ‡", "‡ Homilías de Monseñor Romero ‡"
-    text = re.sub(r'‡\s*Ciclo [ABC],\s*\d{4}\s*‡', '', text)
+    # Spanish running headers: "‡ Ciclo C, 1977 ‡", "‡ Ciclo A, 1977-1978 ‡", etc.
+    text = re.sub(r'‡\s*Ciclo [ABC],\s*\d{4}(?:-\d{4})?\s*‡', '', text)
     text = re.sub(r'‡\s*Homilías de Monseñor Romero\s*‡', '', text)
 
     # English running headers: "St Oscar Romero, ...", "Read or listen to..."
