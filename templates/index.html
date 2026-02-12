@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browse Homilies - Romero Ngram Viewer</title>
+    <title>Browse Homilies - Romero Text Explorer</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -185,7 +185,7 @@
 <body>
     <div class="page">
         <div class="header">
-            <h1><a href="{{ url_for('ngram_viewer') }}">Romero Ngram Viewer</a></h1>
+            <h1><a href="{{ url_for('ngram_viewer') }}">Romero Text Explorer</a></h1>
             <p class="subtitle">{{ homilies|length }} homilies &middot; March 1977 – March 1980</p>
         </div>
 
@@ -248,7 +248,7 @@
 
         <div class="footer">
             <p>Data sourced from <a href="https://www.romerotrust.org.uk" target="_blank">The Romero Trust</a>
-            &middot; <a href="{{ url_for('ngram_viewer') }}">Ngram Viewer</a></p>
+            &middot; <a href="{{ url_for('ngram_viewer') }}">Text Explorer</a></p>
         </div>
     </div>
 </body>

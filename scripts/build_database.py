@@ -103,7 +103,7 @@ def main():
 
     print("""
 ╔═══════════════════════════════════════════════════════════════════╗
-║            Romero Ngram Viewer - Data Collection                  ║
+║            Romero Text Explorer - Data Collection                  ║
 ║          Builds database from Romero Trust website                ║
 ╚═══════════════════════════════════════════════════════════════════╝
     """)

@@ -1,6 +1,6 @@
-# Romero Ngram Viewer
+# Romero Text Explorer
 
-A text analysis tool for Oscar Romero's homilies (1977-1980), modeled after Google's Ngram Viewer. Search for any word or phrase in Spanish and see how its frequency changed over the three years of Romero's preaching.
+A text analysis tool for Oscar Romero's homilies (1977-1980). Search for any word or phrase in Spanish and see how its frequency changed over the three years of Romero's preaching.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ python app.py
 # Open http://localhost:5000
 ```
 
-The ngram viewer is the main page. Browse all homilies at `/browse` (includes known data issues and links to PDFs on the Romero Trust site).
+The text explorer is the main page. Browse all homilies at `/browse` (includes known data issues and links to PDFs on the Romero Trust site).
 
 There's also a CLI tool for terminal use:
 
@@ -41,6 +41,6 @@ All homilies sourced from [The Romero Trust](https://www.romerotrust.org.uk/homi
 
 **Coverage:**
 - **197 homilies** from March 14, 1977 (his first homily as Archbishop) to March 24, 1980 (day of assassination)
-- **Spanish text** extracted for 188 homilies (9 missing — mostly audio-only or special events)
-- **English text** extracted for 190 homilies (7 missing)
+- **Spanish text** extracted for 193 homilies (4 missing — audio-only or special events)
+- **English text** extracted for 194 homilies (3 missing)
 - **Audio recordings** for 172 homilies (~87%)

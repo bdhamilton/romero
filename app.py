@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Flask web app for Romero Ngram Viewer and homily browsing.
+Flask web app for Romero Text Explorer and homily browsing.
 """
 
 from flask import Flask, render_template, abort, request, jsonify, redirect, url_for
@@ -149,6 +149,6 @@ if __name__ == '__main__':
         print("Run build_database.py first")
         exit(1)
 
-    print("Starting Romero Ngram Viewer")
+    print("Starting Romero Text Explorer")
     print("Open http://localhost:5000 in your browser")
     app.run(debug=False, port=5000)
