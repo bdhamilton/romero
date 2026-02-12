@@ -212,7 +212,7 @@
         <form id="search-form">
             <div class="search-row">
                 <input type="text" id="term" name="term"
-                       placeholder="Enter words or phrases separated by commas..."
+                       placeholder="Enter words, phrases, or wildcards (liber*) separated by commas..."
                        autocomplete="off" autofocus>
                 <button type="submit">Search</button>
             </div>
@@ -220,12 +220,11 @@
 
         <div class="examples" id="examples">
             Try:
-            <a data-term="pueblo">pueblo</a>,
-            <a data-term="violencia">violencia</a>,
             <a data-term="justicia">justicia</a>,
             <a data-term="esperanza">esperanza</a>,
-            <a data-term="pueblo de dios">pueblo de dios</a>,
-            <a data-term="iglesia">iglesia</a>
+            <a data-term="pueblo de dios">pueblo de dios</a>
+            &middot; Wildcards:
+            <a data-term="esper*">esper*</a>
             &middot; Compare:
             <a data-term="justicia, paz, violencia">justicia, paz, violencia</a>,
             <a data-term="pueblo, iglesia">pueblo, iglesia</a>
@@ -658,7 +657,7 @@ document.getElementById('show-events').addEventListener('change', function() {
 
 // Auto-search from URL, or default to pueblo,iglesia
 const params = new URLSearchParams(window.location.search);
-const initialTerm = params.get('term') || 'pueblo, iglesia';
+const initialTerm = params.get('term') || 'amor, justicia';
 document.getElementById('term').value = initialTerm;
 doSearch(initialTerm);
 </script>

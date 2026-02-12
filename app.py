@@ -87,6 +87,9 @@ def api_search():
 
     result = search_corpus(term, db_path=DB_PATH, accent_sensitive=accent_sensitive)
 
+    if 'error' in result:
+        return jsonify({'error': result['error']}), 400
+
     # Convert OrderedDict to list for JSON serialization
     months = []
     for month, data in result['months'].items():

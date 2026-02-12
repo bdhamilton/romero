@@ -27,14 +27,32 @@ def tokenize(text):
     return re.findall(r'\w+', text.lower(), re.UNICODE)
 
 
+def tokenize_query(text):
+    """Split query text into lowercase tokens, preserving * wildcards."""
+    return re.findall(r'[\w*]+', text.lower(), re.UNICODE)
+
+
+def _token_pattern(token):
+    """Convert a single search token to a regex fragment.
+
+    Plain token:  re.escape('violencia') -> 'violencia'
+    Wildcard:     'liber*' -> 'liber\\w*', '*cion' -> '\\w*cion'
+    """
+    if '*' in token:
+        parts = token.split('*')
+        return r'\w*'.join(re.escape(p) for p in parts)
+    return re.escape(token)
+
+
 def _build_pattern(search_tokens):
     """Build a compiled regex pattern from search tokens.
 
     Single word: r'\\bviolencia\\b'
     Phrase:      r'\\bpueblo\\W+de\\W+dios\\b'
+    Wildcard:    r'\\bliber\\w*\\b'
     """
-    escaped = [re.escape(t) for t in search_tokens]
-    return re.compile(r'\b' + r'\W+'.join(escaped) + r'\b', re.UNICODE)
+    parts = [_token_pattern(t) for t in search_tokens]
+    return re.compile(r'\b' + r'\W+'.join(parts) + r'\b', re.UNICODE)
 
 
 def search_corpus(term, db_path='romero.db', accent_sensitive=False):
@@ -52,11 +70,18 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
     start = time.time()
 
     normalize = fold_accents if not accent_sensitive else lambda t: t
-    search_tokens = tokenize(normalize(term))
+    search_tokens = tokenize_query(normalize(term))
 
     if not search_tokens:
         return {'term': term, 'tokens': [], 'elapsed': 0,
                 'total_count': 0, 'total_homilies': 0, 'months': OrderedDict()}
+
+    # Reject bare wildcards (e.g. just "*") — they'd match every word
+    for tok in search_tokens:
+        if tok.replace('*', '') == '':
+            return {'term': term, 'tokens': search_tokens, 'elapsed': 0,
+                    'error': 'Wildcard * must be combined with letters (e.g. liber*)',
+                    'total_count': 0, 'total_homilies': 0, 'months': OrderedDict()}
 
     pattern = _build_pattern(search_tokens)
 
