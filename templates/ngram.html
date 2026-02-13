@@ -42,6 +42,33 @@
             margin-top: 4px;
         }
 
+        /* Language toggle */
+        .lang-toggle {
+            display: flex;
+            justify-content: center;
+            margin-top: 16px;
+        }
+        .lang-toggle button {
+            font-size: 14px;
+            padding: 6px 20px;
+            border: 1px solid #dadce0;
+            background: #f8f9fa;
+            color: #5f6368;
+            cursor: pointer;
+        }
+        .lang-toggle button:first-child {
+            border-radius: 20px 0 0 20px;
+        }
+        .lang-toggle button:last-child {
+            border-radius: 0 20px 20px 0;
+            border-left: none;
+        }
+        .lang-toggle button.active {
+            background: #4285f4;
+            border-color: #4285f4;
+            color: #fff;
+        }
+
         /* Search */
         .search-row {
             display: flex;
@@ -209,6 +236,11 @@
             <p class="subtitle">Word frequency in Archbishop Romero's homilies, 1977–1980</p>
         </div>
 
+        <div class="lang-toggle" id="lang-toggle">
+            <button data-lang="es" class="active">Espa&#241;ol</button>
+            <button data-lang="en">English</button>
+        </div>
+
         <form id="search-form">
             <div class="search-row">
                 <input type="text" id="term" name="term"
@@ -218,17 +250,7 @@
             </div>
         </form>
 
-        <div class="examples" id="examples">
-            Try:
-            <a data-term="justicia">justicia</a>,
-            <a data-term="esperanza">esperanza</a>,
-            <a data-term="pueblo de dios">pueblo de dios</a>
-            &middot; Wildcards:
-            <a data-term="esper*">esper*</a>
-            &middot; Compare:
-            <a data-term="justicia, paz, violencia">justicia, paz, violencia</a>,
-            <a data-term="pueblo, iglesia">pueblo, iglesia</a>
-        </div>
+        <div class="examples" id="examples"></div>
 
         <div class="status" id="status"></div>
 
@@ -268,6 +290,35 @@
 <script>
 const SEARCH_URL = {{ url_for('api_search') | tojson }};
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const LANG_CONFIG = {
+    es: {
+        defaultTerm: 'amor, justicia',
+        examples: `Try:
+            <a data-term="justicia">justicia</a>,
+            <a data-term="esperanza">esperanza</a>,
+            <a data-term="pueblo de dios">pueblo de dios</a>
+            &middot; Wildcards:
+            <a data-term="esper*">esper*</a>
+            &middot; Compare:
+            <a data-term="justicia, paz, violencia">justicia, paz, violencia</a>,
+            <a data-term="pueblo, iglesia">pueblo, iglesia</a>`,
+    },
+    en: {
+        defaultTerm: 'love, justice',
+        examples: `Try:
+            <a data-term="justice">justice</a>,
+            <a data-term="hope">hope</a>,
+            <a data-term="people of God">people of God</a>
+            &middot; Wildcards:
+            <a data-term="liber*">liber*</a>
+            &middot; Compare:
+            <a data-term="justice, peace, violence">justice, peace, violence</a>,
+            <a data-term="church, kingdom">church, kingdom</a>`,
+    },
+};
+
+let currentLang = 'es';
 
 const COLORS = [
     { border: '#4285f4', bg: 'rgba(66, 133, 244, 0.08)' },
@@ -587,7 +638,7 @@ async function doSearch(input) {
     try {
         // Fetch all terms in parallel
         const fetches = terms.map(term =>
-            fetch(SEARCH_URL + '?term=' + encodeURIComponent(term)).then(r => r.json())
+            fetch(SEARCH_URL + '?term=' + encodeURIComponent(term) + '&lang=' + currentLang).then(r => r.json())
         );
         const results = await Promise.all(fetches);
 
@@ -618,9 +669,14 @@ async function doSearch(input) {
         renderChart(hasResults);
         showTopHomilies(hasResults);
 
-        // Update URL with comma-separated terms
+        // Update URL with comma-separated terms and language
         const url = new URL(window.location);
         url.searchParams.set('term', terms.join(','));
+        if (currentLang !== 'es') {
+            url.searchParams.set('lang', currentLang);
+        } else {
+            url.searchParams.delete('lang');
+        }
         history.replaceState(null, '', url);
 
     } catch (e) {
@@ -655,9 +711,33 @@ document.getElementById('show-events').addEventListener('change', function() {
     if (lastResults.length) { renderChart(lastResults); showTopHomilies(lastResults); }
 });
 
-// Auto-search from URL, or default to pueblo,iglesia
+// Language toggle
+function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('#lang-toggle button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+    document.getElementById('examples').innerHTML = LANG_CONFIG[lang].examples;
+}
+
+document.getElementById('lang-toggle').addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-lang]');
+    if (!btn || btn.dataset.lang === currentLang) return;
+    setLang(btn.dataset.lang);
+    // If the current search term matches the other language's default, swap it
+    const input = document.getElementById('term');
+    const otherLang = btn.dataset.lang === 'es' ? 'en' : 'es';
+    if (input.value.trim() === LANG_CONFIG[otherLang].defaultTerm) {
+        input.value = LANG_CONFIG[btn.dataset.lang].defaultTerm;
+    }
+    doSearch(input.value.trim());
+});
+
+// Auto-search from URL, or default
 const params = new URLSearchParams(window.location.search);
-const initialTerm = params.get('term') || 'amor, justicia';
+const initialLang = params.get('lang') === 'en' ? 'en' : 'es';
+setLang(initialLang);
+const initialTerm = params.get('term') || LANG_CONFIG[currentLang].defaultTerm;
 document.getElementById('term').value = initialTerm;
 doSearch(initialTerm);
 </script>

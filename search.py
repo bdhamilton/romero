@@ -1,12 +1,12 @@
 """
 Search module for Romero homilies corpus.
 
-Provides word/phrase frequency search across Spanish texts,
+Provides word/phrase frequency search across Spanish and English texts,
 with accent-insensitive matching and monthly aggregation.
 
-Uses pre-folded text (spanish_text_folded) and pre-computed word counts
-(spanish_word_count) from the database for fast regex-based search.
-Run scripts/build_search_index.py to populate these columns.
+Uses pre-folded text and pre-computed word counts from the database for
+fast regex-based search. Run scripts/build_search_index.py to populate
+the index columns for both languages.
 """
 
 import sqlite3
@@ -55,9 +55,12 @@ def _build_pattern(search_tokens):
     return re.compile(r'\b' + r'\W+'.join(parts) + r'\b', re.UNICODE)
 
 
-def search_corpus(term, db_path='romero.db', accent_sensitive=False):
+def search_corpus(term, db_path='romero.db', accent_sensitive=False, language='es'):
     """
-    Search all Spanish homily texts for a word or phrase.
+    Search homily texts for a word or phrase.
+
+    Args:
+        language: 'es' for Spanish (default), 'en' for English
 
     Returns a dict with:
       term: the original search term
@@ -68,6 +71,12 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
       months: OrderedDict of YYYY-MM -> {count, total_words, rate, homilies}
     """
     start = time.time()
+
+    # Map language code to column names
+    lang_prefix = 'spanish' if language == 'es' else 'english'
+    folded_col = f'{lang_prefix}_text_folded'
+    count_col = f'{lang_prefix}_word_count'
+    title_col = f'{lang_prefix}_title'
 
     normalize = fold_accents if not accent_sensitive else lambda t: t
     search_tokens = tokenize_query(normalize(term))
@@ -88,9 +97,9 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(
-        'SELECT id, date, occasion, spanish_title, spanish_text_folded, '
-        'spanish_word_count, detail_url '
-        'FROM homilies WHERE spanish_text_folded IS NOT NULL ORDER BY date'
+        f'SELECT id, date, occasion, {title_col}, {folded_col}, '
+        f'{count_col}, detail_url '
+        f'FROM homilies WHERE {folded_col} IS NOT NULL ORDER BY date'
     ).fetchall()
     conn.close()
 
@@ -103,12 +112,12 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
         month = row['date'][:7]
 
         # Count matches using pre-folded text and compiled regex
-        matches = pattern.findall(row['spanish_text_folded'])
+        matches = pattern.findall(row[folded_col])
         count = len(matches)
 
         if month not in months:
             months[month] = {'count': 0, 'total_words': 0, 'num_homilies': 0, 'homilies': []}
-        months[month]['total_words'] += row['spanish_word_count']
+        months[month]['total_words'] += row[count_col]
         months[month]['num_homilies'] += 1
 
         if count > 0:
@@ -116,7 +125,7 @@ def search_corpus(term, db_path='romero.db', accent_sensitive=False):
             months[month]['homilies'].append({
                 'id': row['id'],
                 'date': row['date'],
-                'title': row['spanish_title'] or row['occasion'] or '(untitled)',
+                'title': row[title_col] or row['occasion'] or '(untitled)',
                 'detail_url': row['detail_url'],
                 'count': count,
             })

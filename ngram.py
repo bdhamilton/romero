@@ -9,6 +9,7 @@ Usage:
     python ngram.py violencia --top 10
     python ngram.py pueblo --norm words
     python ngram.py justicia --norm homilies
+    python ngram.py justice --lang en
 """
 
 import argparse
@@ -26,7 +27,7 @@ def bar(value, max_value, width=40):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Search Romero Spanish homilies for word/phrase frequency over time.'
+        description='Search Romero homilies for word/phrase frequency over time.'
     )
     parser.add_argument('term', help='Word or phrase to search for')
     parser.add_argument('--accent-sensitive', action='store_true',
@@ -35,12 +36,15 @@ def main():
                         help='Number of top homilies to show (default: 5)')
     parser.add_argument('--norm', choices=['words', 'homilies'], default=None,
                         help='Normalize: "words" = per 10k words, "homilies" = per homily')
+    parser.add_argument('--lang', choices=['es', 'en'], default='es',
+                        help='Language: "es" = Spanish (default), "en" = English')
     parser.add_argument('--db', default='romero.db',
                         help='Path to database (default: romero.db)')
     args = parser.parse_args()
 
     result = search_corpus(args.term, db_path=args.db,
-                           accent_sensitive=args.accent_sensitive)
+                           accent_sensitive=args.accent_sensitive,
+                           language=args.lang)
 
     if not result['tokens']:
         print(f'No valid search tokens in: "{args.term}"')
@@ -49,7 +53,8 @@ def main():
     # Header
     token_str = ' '.join(result['tokens'])
     mode = 'accent-sensitive' if args.accent_sensitive else 'accent-insensitive'
-    print(f'\nSearching Spanish corpus for: "{args.term}" [{token_str}] ({mode})')
+    lang_label = 'Spanish' if args.lang == 'es' else 'English'
+    print(f'\nSearching {lang_label} corpus for: "{args.term}" [{token_str}] ({mode})')
     print(f'Found {result["total_count"]} occurrences in '
           f'{result["total_homilies"]} homilies ({result["elapsed"]:.2f}s)\n')
 

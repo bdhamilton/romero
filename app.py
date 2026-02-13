@@ -81,11 +81,14 @@ def api_search():
     """JSON API for ngram search."""
     term = request.args.get('term', '').strip()
     accent_sensitive = request.args.get('accent_sensitive', '0') == '1'
+    lang = request.args.get('lang', 'es')
+    if lang not in ('es', 'en'):
+        lang = 'es'
 
     if not term:
         return jsonify({'error': 'No search term provided'}), 400
 
-    result = search_corpus(term, db_path=DB_PATH, accent_sensitive=accent_sensitive)
+    result = search_corpus(term, db_path=DB_PATH, accent_sensitive=accent_sensitive, language=lang)
 
     if 'error' in result:
         return jsonify({'error': result['error']}), 400
