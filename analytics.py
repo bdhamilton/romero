@@ -9,10 +9,16 @@ COUNT(DISTINCT user_agent).
 
 Usage:
     import analytics
-    analytics.init(app, DB_PATH)           # on startup
-    analytics.log_search(term, lang, n, ua)  # from the search route
+    analytics.init(DB_PATH)                    # on startup
+
+    @app.route('/')
+    @analytics.track_pageview                  # <-- @app.route must be outermost
+    def home(): ...
+
+    analytics.log_search(term, lang, n, ua)    # from the search route
 """
 
+import functools
 import sqlite3
 import sys
 
@@ -25,19 +31,15 @@ _BOT_UA_SUBSTRINGS = (
     'facebookexternalhit', 'python-requests', 'curl/', 'wget/',
 )
 
-_PAGEVIEW_SKIP_PREFIXES = ('/static/', '/api/')
-_PAGEVIEW_SKIP_EXACT = ('/favicon.ico', '/robots.txt')
-
 _db_path = None
 
 
-def init(app, db_path: str) -> None:
-    """Set up analytics against the given Flask app and SQLite database.
+def init(db_path: str) -> None:
+    """Set up analytics against the given SQLite database.
 
     Creates the tables (migrating from the earlier hashed-visitor schema
-    on this branch if present) and registers a before_request handler
-    that logs page views. Safe to call more than once; errors are logged
-    to stderr rather than raised so analytics can never break startup.
+    on this branch if present). Errors are logged to stderr rather than
+    raised so analytics can never break startup.
     """
     global _db_path
     _db_path = db_path
@@ -45,8 +47,37 @@ def init(app, db_path: str) -> None:
         _create_tables(db_path)
     except Exception as e:
         print(f"analytics: init failed: {e}", file=sys.stderr)
-        return
-    app.before_request(_log_pageview)
+
+
+def track_pageview(view_func):
+    """Decorator that logs a page view for a Flask route.
+
+    Apply BELOW @app.route so @app.route stays outermost — otherwise
+    Flask registers the un-wrapped view and the decorator never runs:
+
+        @app.route('/')
+        @analytics.track_pageview
+        def home(): ...
+
+    Only logs GET requests. Bot UAs are skipped. Non-fatal on error.
+    """
+    @functools.wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if request.method == 'GET' and _db_path is not None:
+            ua = request.headers.get('User-Agent', '')
+            if not _is_bot(ua):
+                try:
+                    conn = sqlite3.connect(_db_path)
+                    conn.execute(
+                        'INSERT INTO pageviews (path, user_agent) VALUES (?, ?)',
+                        (request.path, ua),
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"analytics: pageview log failed: {e}", file=sys.stderr)
+        return view_func(*args, **kwargs)
+    return wrapper
 
 
 def log_search(term: str, lang: str, results: int, user_agent: str) -> None:
@@ -105,26 +136,3 @@ def _create_tables(db_path: str) -> None:
     ''')
     conn.commit()
     conn.close()
-
-
-def _log_pageview() -> None:
-    if request.method != 'GET':
-        return
-    path = request.path
-    if path in _PAGEVIEW_SKIP_EXACT:
-        return
-    if any(path.startswith(p) for p in _PAGEVIEW_SKIP_PREFIXES):
-        return
-    ua = request.headers.get('User-Agent', '')
-    if _is_bot(ua):
-        return
-    try:
-        conn = sqlite3.connect(_db_path)
-        conn.execute(
-            'INSERT INTO pageviews (path, user_agent) VALUES (?, ?)',
-            (path, ua),
-        )
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"analytics: pageview log failed: {e}", file=sys.stderr)

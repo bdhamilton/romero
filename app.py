@@ -24,16 +24,18 @@ def get_db():
 
 
 if Path(DB_PATH).exists():
-    analytics.init(app, DB_PATH)
+    analytics.init(DB_PATH)
 
 
 @app.route('/')
+@analytics.track_pageview
 def ngram_viewer():
     """Ngram viewer — main page."""
     return render_template('ngram.html')
 
 
 @app.route('/browse')
+@analytics.track_pageview
 def browse():
     """Show all homilies in a table."""
     conn = get_db()
@@ -130,6 +132,7 @@ def api_search():
 
 
 @app.route('/homily/<int:homily_id>/flag', methods=['GET', 'POST'])
+@analytics.track_pageview
 def flag_homily(homily_id):
     """Flag a data issue on a homily."""
     conn = get_db()
