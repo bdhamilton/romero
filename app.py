@@ -100,8 +100,7 @@ def api_search():
     result = search_corpus(term, db_path=DB_PATH, accent_sensitive=accent_sensitive, language=lang)
 
     analytics.log_search(
-        term, lang,
-        result.get('total_count', 0) if isinstance(result, dict) else 0,
+        term, lang, result.get('total_count', 0),
         request.headers.get('User-Agent', ''),
     )
 

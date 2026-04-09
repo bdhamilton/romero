@@ -44,7 +44,25 @@ def init(db_path: str) -> None:
     global _db_path
     _db_path = db_path
     try:
-        _create_tables(db_path)
+        conn = sqlite3.connect(db_path)
+        conn.executescript('''
+            CREATE TABLE IF NOT EXISTS pageviews (
+              ts         TEXT NOT NULL DEFAULT (datetime('now')),
+              path       TEXT NOT NULL,
+              user_agent TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS searches (
+              ts         TEXT NOT NULL DEFAULT (datetime('now')),
+              term       TEXT NOT NULL,
+              lang       TEXT NOT NULL,
+              results    INTEGER,
+              user_agent TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_pageviews_ts ON pageviews(ts);
+            CREATE INDEX IF NOT EXISTS idx_searches_ts ON searches(ts);
+        ''')
+        conn.commit()
+        conn.close()
     except Exception as e:
         print(f"analytics: init failed: {e}", file=sys.stderr)
 
@@ -63,7 +81,7 @@ def track_pageview(view_func):
     """
     @functools.wraps(view_func)
     def wrapper(*args, **kwargs):
-        if request.method == 'GET' and _db_path is not None:
+        if request.method == 'GET':
             ua = request.headers.get('User-Agent', '')
             if not _is_bot(ua):
                 try:
@@ -82,7 +100,7 @@ def track_pageview(view_func):
 
 def log_search(term: str, lang: str, results: int, user_agent: str) -> None:
     """Log a search. Non-fatal on error, skipped for bot UAs."""
-    if _db_path is None or _is_bot(user_agent):
+    if _is_bot(user_agent):
         return
     try:
         conn = sqlite3.connect(_db_path)
@@ -101,25 +119,3 @@ def _is_bot(user_agent: str) -> bool:
         return True
     ua = user_agent.lower()
     return any(s in ua for s in _BOT_UA_SUBSTRINGS)
-
-
-def _create_tables(db_path: str) -> None:
-    conn = sqlite3.connect(db_path)
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS pageviews (
-          ts         TEXT NOT NULL DEFAULT (datetime('now')),
-          path       TEXT NOT NULL,
-          user_agent TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS searches (
-          ts         TEXT NOT NULL DEFAULT (datetime('now')),
-          term       TEXT NOT NULL,
-          lang       TEXT NOT NULL,
-          results    INTEGER,
-          user_agent TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_pageviews_ts ON pageviews(ts);
-        CREATE INDEX IF NOT EXISTS idx_searches_ts ON searches(ts);
-    ''')
-    conn.commit()
-    conn.close()
