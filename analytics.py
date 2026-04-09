@@ -37,9 +37,9 @@ _db_path = None
 def init(db_path: str) -> None:
     """Set up analytics against the given SQLite database.
 
-    Creates the tables (migrating from the earlier hashed-visitor schema
-    on this branch if present). Errors are logged to stderr rather than
-    raised so analytics can never break startup.
+    Creates the pageviews and searches tables if they don't exist.
+    Errors are logged to stderr rather than raised so analytics can
+    never break startup.
     """
     global _db_path
     _db_path = db_path
@@ -105,19 +105,6 @@ def _is_bot(user_agent: str) -> bool:
 
 def _create_tables(db_path: str) -> None:
     conn = sqlite3.connect(db_path)
-    # One-time migration from the earlier version of this branch, which
-    # stored a salted hash in visitor_hash plus a salt in analytics_meta.
-    # If we find old-schema tables, drop them and recreate.
-    for table in ('pageviews', 'searches'):
-        exists = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            (table,),
-        ).fetchone()
-        if exists:
-            cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
-            if 'user_agent' not in cols:
-                conn.execute(f'DROP TABLE {table}')
-    conn.execute('DROP TABLE IF EXISTS analytics_meta')
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS pageviews (
           ts         TEXT NOT NULL DEFAULT (datetime('now')),
