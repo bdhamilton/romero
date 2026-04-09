@@ -4,10 +4,11 @@ Flask web app for Romero Text Explorer and homily browsing.
 """
 
 import sqlite3
-import sys
 from pathlib import Path
 
 from flask import Flask, render_template, abort, request, jsonify, redirect, url_for
+
+import analytics
 from search import search_corpus
 
 app = Flask(__name__)
@@ -22,102 +23,8 @@ def get_db():
     return conn
 
 
-# --- Analytics ---------------------------------------------------------------
-# Lightweight traffic tracking stored in the same SQLite DB as the rest of
-# the app. No cookies, no client-side JS, no IPs, no third parties.
-#
-# We log each page view and each search, plus the User-Agent string of the
-# request. UA is kept so we can (a) filter out crawlers up front via a
-# substring match, and (b) spot-check that filter against what's actually
-# hitting the site. Distinct visitors can be counted approximately as
-# COUNT(DISTINCT user_agent); at low traffic this undercounts slightly from
-# UA collisions but is close enough for rough counts.
-
-_BOT_UA_SUBSTRINGS = (
-    'bot', 'crawl', 'spider', 'slurp', 'bingpreview', 'mediapartners',
-    'headless', 'monitor', 'pingdom', 'uptimerobot', 'ahrefs', 'semrush',
-    'facebookexternalhit', 'python-requests', 'curl/', 'wget/',
-)
-
-
-def _init_analytics():
-    """Create analytics tables on first run. Migrates the earlier
-    hashed-visitor schema from this branch if it exists."""
-    conn = sqlite3.connect(DB_PATH)
-    # One-time migration from the earlier version of this branch, which
-    # stored a salted hash in visitor_hash plus a salt in analytics_meta.
-    # If we find old-schema tables, drop them and recreate.
-    for table in ('pageviews', 'searches'):
-        exists = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            (table,),
-        ).fetchone()
-        if exists:
-            cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
-            if 'user_agent' not in cols:
-                conn.execute(f'DROP TABLE {table}')
-    conn.execute('DROP TABLE IF EXISTS analytics_meta')
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS pageviews (
-          ts         TEXT NOT NULL DEFAULT (datetime('now')),
-          path       TEXT NOT NULL,
-          user_agent TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS searches (
-          ts         TEXT NOT NULL DEFAULT (datetime('now')),
-          term       TEXT NOT NULL,
-          lang       TEXT NOT NULL,
-          results    INTEGER,
-          user_agent TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_pageviews_ts ON pageviews(ts);
-        CREATE INDEX IF NOT EXISTS idx_searches_ts ON searches(ts);
-    ''')
-    conn.commit()
-    conn.close()
-
-
-def _is_bot(user_agent: str) -> bool:
-    if not user_agent:
-        return True
-    ua = user_agent.lower()
-    return any(s in ua for s in _BOT_UA_SUBSTRINGS)
-
-
-_PAGEVIEW_SKIP_PREFIXES = ('/static/', '/api/')
-_PAGEVIEW_SKIP_EXACT = ('/favicon.ico', '/robots.txt')
-
-
-@app.before_request
-def _log_pageview():
-    if request.method != 'GET':
-        return
-    path = request.path
-    if path in _PAGEVIEW_SKIP_EXACT:
-        return
-    if any(path.startswith(p) for p in _PAGEVIEW_SKIP_PREFIXES):
-        return
-    ua = request.headers.get('User-Agent', '')
-    if _is_bot(ua):
-        return
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute(
-            'INSERT INTO pageviews (path, user_agent) VALUES (?, ?)',
-            (path, ua),
-        )
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"analytics: pageview log failed: {e}", file=sys.stderr)
-
-
 if Path(DB_PATH).exists():
-    try:
-        _init_analytics()
-    except Exception as e:
-        print(f"analytics: init failed: {e}", file=sys.stderr)
-# --- end analytics -----------------------------------------------------------
+    analytics.init(app, DB_PATH)
 
 
 @app.route('/')
@@ -190,20 +97,11 @@ def api_search():
 
     result = search_corpus(term, db_path=DB_PATH, accent_sensitive=accent_sensitive, language=lang)
 
-    # Analytics: log the search (non-fatal on failure, skipped for bots).
-    try:
-        ua = request.headers.get('User-Agent', '')
-        if not _is_bot(ua):
-            total = result.get('total_count', 0) if isinstance(result, dict) else 0
-            conn = sqlite3.connect(DB_PATH)
-            conn.execute(
-                'INSERT INTO searches (term, lang, results, user_agent) VALUES (?, ?, ?, ?)',
-                (term, lang, total, ua),
-            )
-            conn.commit()
-            conn.close()
-    except Exception as e:
-        print(f"analytics: search log failed: {e}", file=sys.stderr)
+    analytics.log_search(
+        term, lang,
+        result.get('total_count', 0) if isinstance(result, dict) else 0,
+        request.headers.get('User-Agent', ''),
+    )
 
     if 'error' in result:
         return jsonify({'error': result['error']}), 400
