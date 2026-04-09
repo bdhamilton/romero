@@ -3,8 +3,6 @@
 Flask web app for Romero Text Explorer and homily browsing.
 """
 
-import hashlib
-import secrets
 import sqlite3
 import sys
 from pathlib import Path
@@ -25,15 +23,15 @@ def get_db():
 
 
 # --- Analytics ---------------------------------------------------------------
-# Lightweight, privacy-respecting traffic tracking. Stored in the same SQLite
-# DB as the rest of the app. No cookies, no client-side JS, no third parties.
+# Lightweight traffic tracking stored in the same SQLite DB as the rest of
+# the app. No cookies, no client-side JS, no IPs, no third parties.
 #
-# Distinct users are counted via a salted hash of IP + User-Agent. The salt is
-# generated once on first run and never rotates, so returning visitors collide
-# on the same hash across time (which is what we want). Privacy relies on the
-# DB staying on the server: the hash is not reversible without the salt.
-
-_ANALYTICS_SALT = None
+# We log each page view and each search, plus the User-Agent string of the
+# request. UA is kept so we can (a) filter out crawlers up front via a
+# substring match, and (b) spot-check that filter against what's actually
+# hitting the site. Distinct visitors can be counted approximately as
+# COUNT(DISTINCT user_agent); at low traffic this undercounts slightly from
+# UA collisions but is close enough for rough counts.
 
 _BOT_UA_SUBSTRINGS = (
     'bot', 'crawl', 'spider', 'slurp', 'bingpreview', 'mediapartners',
@@ -43,52 +41,40 @@ _BOT_UA_SUBSTRINGS = (
 
 
 def _init_analytics():
-    """Create analytics tables and generate a persistent salt on first run."""
+    """Create analytics tables on first run. Migrates the earlier
+    hashed-visitor schema from this branch if it exists."""
     conn = sqlite3.connect(DB_PATH)
+    # One-time migration from the earlier version of this branch, which
+    # stored a salted hash in visitor_hash plus a salt in analytics_meta.
+    # If we find old-schema tables, drop them and recreate.
+    for table in ('pageviews', 'searches'):
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
+        ).fetchone()
+        if exists:
+            cols = [r[1] for r in conn.execute(f'PRAGMA table_info({table})').fetchall()]
+            if 'user_agent' not in cols:
+                conn.execute(f'DROP TABLE {table}')
+    conn.execute('DROP TABLE IF EXISTS analytics_meta')
     conn.executescript('''
-        CREATE TABLE IF NOT EXISTS analytics_meta (
-          key   TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        );
         CREATE TABLE IF NOT EXISTS pageviews (
-          ts           TEXT NOT NULL DEFAULT (datetime('now')),
-          path         TEXT NOT NULL,
-          visitor_hash TEXT NOT NULL
+          ts         TEXT NOT NULL DEFAULT (datetime('now')),
+          path       TEXT NOT NULL,
+          user_agent TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS searches (
-          ts           TEXT NOT NULL DEFAULT (datetime('now')),
-          term         TEXT NOT NULL,
-          lang         TEXT NOT NULL,
-          results      INTEGER,
-          visitor_hash TEXT NOT NULL
+          ts         TEXT NOT NULL DEFAULT (datetime('now')),
+          term       TEXT NOT NULL,
+          lang       TEXT NOT NULL,
+          results    INTEGER,
+          user_agent TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_pageviews_ts ON pageviews(ts);
-        CREATE INDEX IF NOT EXISTS idx_pageviews_hash ON pageviews(visitor_hash);
         CREATE INDEX IF NOT EXISTS idx_searches_ts ON searches(ts);
-        CREATE INDEX IF NOT EXISTS idx_searches_hash ON searches(visitor_hash);
     ''')
-    row = conn.execute(
-        "SELECT value FROM analytics_meta WHERE key = 'salt'"
-    ).fetchone()
-    if row is None:
-        conn.execute(
-            "INSERT INTO analytics_meta (key, value) VALUES ('salt', ?)",
-            (secrets.token_hex(32),),
-        )
-        conn.commit()
+    conn.commit()
     conn.close()
-
-
-def _get_salt():
-    global _ANALYTICS_SALT
-    if _ANALYTICS_SALT is None:
-        conn = sqlite3.connect(DB_PATH)
-        row = conn.execute(
-            "SELECT value FROM analytics_meta WHERE key = 'salt'"
-        ).fetchone()
-        conn.close()
-        _ANALYTICS_SALT = row[0] if row else ''
-    return _ANALYTICS_SALT
 
 
 def _is_bot(user_agent: str) -> bool:
@@ -96,15 +82,6 @@ def _is_bot(user_agent: str) -> bool:
         return True
     ua = user_agent.lower()
     return any(s in ua for s in _BOT_UA_SUBSTRINGS)
-
-
-def _visitor_hash():
-    """Stable salted hash of IP + UA. Same visitor → same hash across time."""
-    fwd = request.headers.get('X-Forwarded-For', '')
-    ip = fwd.split(',')[0].strip() if fwd else (request.remote_addr or '')
-    ua = request.headers.get('User-Agent', '')
-    digest = hashlib.sha256((_get_salt() + ip + ua).encode('utf-8')).hexdigest()
-    return digest[:16]
 
 
 _PAGEVIEW_SKIP_PREFIXES = ('/static/', '/api/')
@@ -120,13 +97,14 @@ def _log_pageview():
         return
     if any(path.startswith(p) for p in _PAGEVIEW_SKIP_PREFIXES):
         return
-    if _is_bot(request.headers.get('User-Agent', '')):
+    ua = request.headers.get('User-Agent', '')
+    if _is_bot(ua):
         return
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.execute(
-            'INSERT INTO pageviews (path, visitor_hash) VALUES (?, ?)',
-            (path, _visitor_hash()),
+            'INSERT INTO pageviews (path, user_agent) VALUES (?, ?)',
+            (path, ua),
         )
         conn.commit()
         conn.close()
@@ -214,12 +192,13 @@ def api_search():
 
     # Analytics: log the search (non-fatal on failure, skipped for bots).
     try:
-        if not _is_bot(request.headers.get('User-Agent', '')):
+        ua = request.headers.get('User-Agent', '')
+        if not _is_bot(ua):
             total = result.get('total_count', 0) if isinstance(result, dict) else 0
             conn = sqlite3.connect(DB_PATH)
             conn.execute(
-                'INSERT INTO searches (term, lang, results, visitor_hash) VALUES (?, ?, ?, ?)',
-                (term, lang, total, _visitor_hash()),
+                'INSERT INTO searches (term, lang, results, user_agent) VALUES (?, ?, ?, ?)',
+                (term, lang, total, ua),
             )
             conn.commit()
             conn.close()
