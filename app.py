@@ -3,9 +3,12 @@
 Flask web app for Romero Text Explorer and homily browsing.
 """
 
-from flask import Flask, render_template, abort, request, jsonify, redirect, url_for
 import sqlite3
 from pathlib import Path
+
+from flask import Flask, render_template, abort, request, jsonify, redirect, url_for
+
+import analytics
 from search import search_corpus
 
 app = Flask(__name__)
@@ -20,13 +23,19 @@ def get_db():
     return conn
 
 
+if Path(DB_PATH).exists():
+    analytics.init(DB_PATH)
+
+
 @app.route('/')
+@analytics.track_pageview
 def ngram_viewer():
     """Ngram viewer — main page."""
     return render_template('ngram.html')
 
 
 @app.route('/browse')
+@analytics.track_pageview
 def browse():
     """Show all homilies in a table."""
     conn = get_db()
@@ -90,6 +99,11 @@ def api_search():
 
     result = search_corpus(term, db_path=DB_PATH, accent_sensitive=accent_sensitive, language=lang)
 
+    analytics.log_search(
+        term, lang, result.get('total_count', 0),
+        request.headers.get('User-Agent', ''),
+    )
+
     if 'error' in result:
         return jsonify({'error': result['error']}), 400
 
@@ -117,6 +131,7 @@ def api_search():
 
 
 @app.route('/homily/<int:homily_id>/flag', methods=['GET', 'POST'])
+@analytics.track_pageview
 def flag_homily(homily_id):
     """Flag a data issue on a homily."""
     conn = get_db()
