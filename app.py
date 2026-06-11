@@ -6,7 +6,8 @@ Flask web app for Romero Text Explorer and homily browsing.
 from flask import Flask, render_template, abort, request, jsonify, redirect, url_for
 import sqlite3
 from pathlib import Path
-from search import search_corpus
+from search import (search_corpus, extract_snippets, fold_accents,
+                    tokenize_query, _build_pattern)
 
 app = Flask(__name__)
 
@@ -113,6 +114,53 @@ def api_search():
         'total_count': result['total_count'],
         'total_homilies': result['total_homilies'],
         'months': months,
+    })
+
+
+@app.route('/api/snippets')
+def api_snippets():
+    """JSON API for keyword-in-context snippets from a single homily."""
+    homily_id = request.args.get('homily_id', type=int)
+    term = request.args.get('term', '').strip()
+    accent_sensitive = request.args.get('accent_sensitive', '0') == '1'
+    lang = request.args.get('lang', 'es')
+    if lang not in ('es', 'en'):
+        lang = 'es'
+
+    if homily_id is None:
+        return jsonify({'error': 'No homily_id provided'}), 400
+    if not term:
+        return jsonify({'error': 'No search term provided'}), 400
+
+    # Normalize and validate the term exactly as search_corpus does, so
+    # snippet counts always agree with the chart's counts.
+    normalize = fold_accents if not accent_sensitive else lambda t: t
+    tokens = tokenize_query(normalize(term))
+    if not tokens:
+        return jsonify({'error': 'No search term provided'}), 400
+    for tok in tokens:
+        if tok.replace('*', '') == '':
+            return jsonify(
+                {'error': 'Wildcard * must be combined with letters (e.g. liber*)'}), 400
+    pattern = _build_pattern(tokens)
+
+    lang_prefix = 'spanish' if lang == 'es' else 'english'
+    conn = get_db()
+    row = conn.execute(
+        f'SELECT {lang_prefix}_text AS text, {lang_prefix}_text_folded AS folded '
+        'FROM homilies WHERE id = ?', (homily_id,)
+    ).fetchone()
+    conn.close()
+
+    if row is None or not row['text'] or not row['folded']:
+        return jsonify({'error': 'Homily not found or has no text in this language'}), 404
+
+    snippets = extract_snippets(row['text'], row['folded'], pattern)
+    return jsonify({
+        'homily_id': homily_id,
+        'term': term,
+        'count': sum(len(s['highlights']) for s in snippets),
+        'snippets': snippets,
     })
 
 

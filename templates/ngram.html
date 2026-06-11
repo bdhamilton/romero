@@ -186,6 +186,7 @@
             border-bottom: 1px solid #e8eaed;
             font-size: 14px;
             display: flex;
+            flex-wrap: wrap;
             gap: 12px;
         }
         .drilldown-list li:last-child {
@@ -209,6 +210,41 @@
         .drilldown-title a:hover {
             color: #4285f4;
             text-decoration: underline;
+        }
+        .snippets-toggle {
+            margin-left: auto;
+            color: #4285f4;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+        .snippets-toggle:hover {
+            text-decoration: underline;
+        }
+        .snippets {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 4px 0 4px 12px;
+            border-left: 3px solid #dadce0;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #3c4043;
+        }
+        .snippets p {
+            margin: 0 0 8px;
+        }
+        .snippets p:last-child {
+            margin-bottom: 0;
+        }
+        .snippets mark {
+            background: #fef7c0;
+            padding: 0 1px;
+        }
+        .snippets-status {
+            color: #5f6368;
+            font-style: italic;
         }
 
         /* Footer */
@@ -289,6 +325,7 @@
 
 <script>
 const SEARCH_URL = {{ url_for('api_search') | tojson }};
+const SNIPPETS_URL = {{ url_for('api_snippets') | tojson }};
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const LANG_CONFIG = {
@@ -533,6 +570,80 @@ function formatDate(dateStr) {
     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c =>
+        ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+}
+
+function snippetHtml(sn) {
+    // Escape the text and wrap each highlight range in <mark>
+    const parts = [];
+    let pos = 0;
+    for (const [s, e] of sn.highlights) {
+        parts.push(escapeHtml(sn.text.slice(pos, s)));
+        parts.push('<mark>' + escapeHtml(sn.text.slice(s, e)) + '</mark>');
+        pos = e;
+    }
+    parts.push(escapeHtml(sn.text.slice(pos)));
+    return '<p>' + parts.join('') + '</p>';
+}
+
+function homilyRow(h, term) {
+    const title = h.detail_url
+        ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
+        : h.title;
+    return `<li>
+        <span class="drilldown-count">${h.count}x</span>
+        <span class="drilldown-date">${formatDate(h.date)}</span>
+        <span class="drilldown-title">${title}</span>
+        <a class="snippets-toggle" data-homily-id="${h.id}" data-term="${escapeHtml(term)}">show contexts ▸</a>
+    </li>`;
+}
+
+const snippetCache = new Map();
+
+document.getElementById('drilldown').addEventListener('click', async function(e) {
+    const toggle = e.target.closest('.snippets-toggle');
+    if (!toggle) return;
+    const li = toggle.closest('li');
+
+    let box = li.querySelector('.snippets');
+    if (box && box.dataset.retry) {
+        box.remove();  // previous fetch failed — fall through and refetch
+        box = null;
+    }
+    if (box) {
+        const hidden = box.style.display === 'none';
+        box.style.display = hidden ? '' : 'none';
+        toggle.textContent = hidden ? 'hide contexts ▾' : 'show contexts ▸';
+        return;
+    }
+
+    box = document.createElement('div');
+    box.className = 'snippets';
+    box.innerHTML = '<p class="snippets-status">loading…</p>';
+    li.appendChild(box);
+    toggle.textContent = 'hide contexts ▾';
+
+    const id = toggle.dataset.homilyId;
+    const term = toggle.dataset.term;
+    const key = `${id}|${term}|${currentLang}`;
+    try {
+        let data = snippetCache.get(key);
+        if (!data) {
+            const r = await fetch(`${SNIPPETS_URL}?homily_id=${id}&term=${encodeURIComponent(term)}&lang=${currentLang}`);
+            data = await r.json();
+            if (data.error) throw new Error(data.error);
+            snippetCache.set(key, data);
+        }
+        box.innerHTML = data.snippets.map(snippetHtml).join('');
+    } catch (err) {
+        box.innerHTML = `<p class="snippets-status">Could not load contexts: ${escapeHtml(err.message)}</p>`;
+        box.dataset.retry = '1';
+        toggle.textContent = 'show contexts ▸';
+    }
+});
+
 function showDrilldown(results, monthIndex, datasetIndex) {
     const el = document.getElementById('drilldown');
     const multiTerm = results.length > 1;
@@ -556,14 +667,7 @@ function showDrilldown(results, monthIndex, datasetIndex) {
         }
         html += '<ul class="drilldown-list">';
         for (const h of homilies) {
-            const title = h.detail_url
-                ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
-                : h.title;
-            html += `<li>
-                <span class="drilldown-count">${h.count}x</span>
-                <span class="drilldown-date">${formatDate(h.date)}</span>
-                <span class="drilldown-title">${title}</span>
-            </li>`;
+            html += homilyRow(h, data.term);
         }
         html += '</ul>';
     }
@@ -601,14 +705,7 @@ function showTopHomilies(results) {
 
         html += '<ul class="drilldown-list">';
         for (const h of top) {
-            const title = h.detail_url
-                ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
-                : h.title;
-            html += `<li>
-                <span class="drilldown-count">${h.count}x</span>
-                <span class="drilldown-date">${formatDate(h.date)}</span>
-                <span class="drilldown-title">${title}</span>
-            </li>`;
+            html += homilyRow(h, data.term);
         }
         html += '</ul>';
     }

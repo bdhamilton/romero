@@ -3,6 +3,9 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 pdfplumber>=0.10.0
 
+# Dev dependencies, for the test suite
+pytest>=8.0.0
+
 # Prod dependencies
 flask>=3.0.0
 gunicorn==26.0.0
