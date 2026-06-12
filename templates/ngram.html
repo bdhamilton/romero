@@ -695,7 +695,7 @@ function showTopHomilies(results) {
         if (all.length === 0) continue;
 
         all.sort((a, b) => b.count - a.count);
-        const top = all.slice(0, 5);
+        const top = all.slice(0, 10);
         const color = COLORS[results.indexOf(data) % COLORS.length];
 
         const heading = multiTerm
