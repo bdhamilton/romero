@@ -17,3 +17,6 @@ Thumbs.db
 # Editor / AI config
 .claude/
 .vscode/
+# Live user data — server-local, never in git (see docs/specs/2026-06-11-flags-split-design.md)
+flags.db
+flags.db-*

@@ -12,12 +12,36 @@ from search import (search_corpus, extract_snippets, fold_accents,
 app = Flask(__name__)
 
 DB_PATH = 'romero.db'
+FLAGS_DB_PATH = 'flags.db'
+
+# Flags live in their own gitignored file so the corpus (romero.db) can stay
+# in git while the server writes flags freely. The homily_id column refers to
+# homilies(id) in romero.db, but SQLite can't enforce foreign keys across
+# attached databases, so it's a plain column.
+FLAGS_SCHEMA = '''
+    CREATE TABLE IF NOT EXISTS flagdb.flags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        homily_id INTEGER,
+        comment TEXT NOT NULL,
+        status TEXT DEFAULT 'open',  -- 'open', 'resolved', 'wontfix'
+        resolution TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+'''
 
 
 def get_db():
-    """Get database connection."""
+    """Get a connection to the corpus DB with the flags DB attached.
+
+    ATTACH makes both files visible to one connection: main.homilies,
+    flagdb.flags. Cross-file joins work with the flagdb. prefix. ATTACH
+    creates flags.db if missing, and CREATE TABLE IF NOT EXISTS is a no-op
+    once it exists, so a fresh checkout needs no setup.
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute('ATTACH DATABASE ? AS flagdb', (FLAGS_DB_PATH,))
+    conn.execute(FLAGS_SCHEMA)
     return conn
 
 
@@ -52,7 +76,7 @@ def browse():
     flag_rows = cursor.execute('''
         SELECT f.homily_id, f.comment,
                h.date, h.spanish_title, h.english_title, h.occasion
-        FROM flags f
+        FROM flagdb.flags f
         JOIN homilies h ON h.id = f.homily_id
         WHERE f.status = 'open'
         ORDER BY h.date ASC
@@ -180,7 +204,7 @@ def flag_homily(homily_id):
         comment = request.form.get('comment', '').strip()
         if comment:
             conn.execute(
-                'INSERT INTO flags (homily_id, comment) VALUES (?, ?)',
+                'INSERT INTO flagdb.flags (homily_id, comment) VALUES (?, ?)',
                 (homily_id, comment)
             )
             conn.commit()
@@ -188,7 +212,7 @@ def flag_homily(homily_id):
         return redirect(url_for('flag_homily', homily_id=homily_id))
 
     flags = conn.execute(
-        'SELECT * FROM flags WHERE homily_id = ? ORDER BY created_at DESC',
+        'SELECT * FROM flagdb.flags WHERE homily_id = ? ORDER BY created_at DESC',
         (homily_id,)
     ).fetchall()
 
