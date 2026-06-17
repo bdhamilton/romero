@@ -222,6 +222,26 @@
         .snippets-toggle:hover {
             text-decoration: underline;
         }
+        .drilldown-list li.extra-homily {
+            display: none;
+        }
+        .drilldown-list.expanded li.extra-homily {
+            display: flex;
+        }
+        .show-all-btn {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 0;
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 13px;
+            color: #4285f4;
+            cursor: pointer;
+        }
+        .show-all-btn:hover {
+            text-decoration: underline;
+        }
         .snippets {
             width: 100%;
             max-height: 300px;
@@ -588,11 +608,12 @@ function snippetHtml(sn) {
     return '<p>' + parts.join('') + '</p>';
 }
 
-function homilyRow(h, term) {
+function homilyRow(h, term, liClass = '') {
     const title = h.detail_url
         ? `<a href="${h.detail_url}" target="_blank">${h.title}</a>`
         : h.title;
-    return `<li>
+    const cls = liClass ? ` class="${liClass}"` : '';
+    return `<li${cls}>
         <span class="drilldown-count">${h.count}x</span>
         <span class="drilldown-date">${formatDate(h.date)}</span>
         <span class="drilldown-title">${title}</span>
@@ -642,6 +663,19 @@ document.getElementById('drilldown').addEventListener('click', async function(e)
         box.dataset.retry = '1';
         toggle.textContent = 'show contexts ▸';
     }
+});
+
+// "Show all / Show top 10" toggle for the post-search homily list. Each term's
+// button sits directly after its <ul>, so previousElementSibling is its list.
+document.getElementById('drilldown').addEventListener('click', function(e) {
+    const btn = e.target.closest('.show-all-btn');
+    if (!btn) return;
+    const list = btn.previousElementSibling;
+    const expanded = list.classList.toggle('expanded');
+    const total = list.querySelectorAll('li').length;
+    btn.textContent = expanded
+        ? 'Show top 10 ▴'
+        : `Show all ${total} homilies ▾`;
 });
 
 function showDrilldown(results, monthIndex, datasetIndex) {
@@ -695,7 +729,6 @@ function showTopHomilies(results) {
         if (all.length === 0) continue;
 
         all.sort((a, b) => b.count - a.count);
-        const top = all.slice(0, 10);
         const color = COLORS[results.indexOf(data) % COLORS.length];
 
         const heading = multiTerm
@@ -703,11 +736,17 @@ function showTopHomilies(results) {
             : `<h3>Top homilies for \u201c${data.term}\u201d (${data.total_count.toLocaleString()} mention${data.total_count !== 1 ? 's' : ''} across ${data.total_homilies} homil${data.total_homilies !== 1 ? 'ies' : 'y'})</h3>`;
         html += heading;
 
+        // Render the top 10, plus the long tail hidden behind a "show all"
+        // toggle. The full list is already loaded client-side, so revealing the
+        // rest needs no refetch.
         html += '<ul class="drilldown-list">';
-        for (const h of top) {
-            html += homilyRow(h, data.term);
-        }
+        all.forEach((h, idx) => {
+            html += homilyRow(h, data.term, idx >= 10 ? 'extra-homily' : '');
+        });
         html += '</ul>';
+        if (all.length > 10) {
+            html += `<button class="show-all-btn">Show all ${all.length} homilies \u25be</button>`;
+        }
     }
 
     if (html) {
