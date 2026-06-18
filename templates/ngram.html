@@ -41,6 +41,84 @@
             font-size: 14px;
             margin-top: 4px;
         }
+        .subtitle a {
+            color: #4285f4;
+            text-decoration: none;
+        }
+        .subtitle a:hover {
+            text-decoration: underline;
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(32, 33, 36, 0.5);
+            z-index: 1000;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 80px 24px 24px;
+            overflow-y: auto;
+        }
+        .modal-backdrop.open {
+            display: flex;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 560px;
+            width: 100%;
+            padding: 28px 32px 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            position: relative;
+        }
+        .modal h2 {
+            font-size: 20px;
+            font-weight: normal;
+            color: #202124;
+            margin-bottom: 16px;
+        }
+        .modal dl {
+            font-size: 14px;
+            color: #3c4043;
+            line-height: 1.5;
+        }
+        .modal dt {
+            font-weight: 600;
+            color: #202124;
+            margin-top: 12px;
+        }
+        .modal dt:first-child {
+            margin-top: 0;
+        }
+        .modal dd {
+            margin: 2px 0 0;
+            color: #5f6368;
+        }
+        .modal code {
+            font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+            font-size: 13px;
+            background: #f1f3f4;
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: #202124;
+        }
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: #5f6368;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px 8px;
+        }
+        .modal-close:hover {
+            color: #202124;
+        }
 
         /* Language toggle */
         .lang-toggle {
@@ -290,7 +368,34 @@
     <div class="page">
         <div class="header">
             <h1>Romero Text Explorer</h1>
-            <p class="subtitle">Word frequency in Archbishop Romero's homilies, 1977–1980</p>
+            <p class="subtitle">Word frequency in Archbishop Romero's homilies, 1977–1980
+                &middot; <a href="#" id="help-link">How to use this</a></p>
+        </div>
+
+        <div class="modal-backdrop" id="help-modal">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+                <button class="modal-close" id="help-close" aria-label="Close">&times;</button>
+                <h2 id="help-title">Getting the most out of this tool</h2>
+                <dl>
+                    <dt>Compare several terms</dt>
+                    <dd>Separate them with commas: <code>justicia, paz, violencia</code>.</dd>
+
+                    <dt>Match word stems with wildcards</dt>
+                    <dd><code>liber*</code> finds <em>liberación</em>, <em>libertad</em>, <em>liberar</em>, and so on.</dd>
+
+                    <dt>Click any point on the chart</dt>
+                    <dd>See exactly which homilies that month contain the term, with links to the source.</dd>
+
+                    <dt>Normalize the y-axis</dt>
+                    <dd>Some months have more homilies than others. <em>Per 10,000 words</em> controls for that and is usually the fairest comparison.</dd>
+
+                    <dt>Smooth out month-to-month noise</dt>
+                    <dd>Increase smoothing to see long-term trends instead of weekly spikes.</dd>
+
+                    <dt>Overlay historical context</dt>
+                    <dd>Toggle <em>Show historical events</em> to mark key dates from Romero's ministry against the chart.</dd>
+                </dl>
+            </div>
         </div>
 
         <div class="lang-toggle" id="lang-toggle">
@@ -868,6 +973,22 @@ document.getElementById('lang-toggle').addEventListener('click', function(e) {
         input.value = LANG_CONFIG[btn.dataset.lang].defaultTerm;
     }
     doSearch(input.value.trim());
+});
+
+// Help modal
+const helpModal = document.getElementById('help-modal');
+document.getElementById('help-link').addEventListener('click', function(e) {
+    e.preventDefault();
+    helpModal.classList.add('open');
+});
+document.getElementById('help-close').addEventListener('click', function() {
+    helpModal.classList.remove('open');
+});
+helpModal.addEventListener('click', function(e) {
+    if (e.target === helpModal) helpModal.classList.remove('open');
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') helpModal.classList.remove('open');
 });
 
 // Auto-search from URL, or default
